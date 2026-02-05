@@ -5,9 +5,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from rich.console import Console
-
-console = Console()
+from .client.base import MetabaseAPIError, NotFoundError
+from .logging import console, error_console
 
 
 def create_export_dir() -> Path:
@@ -124,3 +123,65 @@ def output_error_json(
     if details:
         envelope["error"]["details"] = details
     console.print_json(json.dumps(envelope, default=str))
+
+
+def handle_api_error(e: Exception, json_output: bool, entity_name: str = "Resource") -> None:
+    """Handle API errors consistently across all commands.
+
+    Args:
+        e: The exception that was raised.
+        json_output: Whether to output in JSON format.
+        entity_name: Name of the entity type for human-readable messages.
+    """
+    if isinstance(e, NotFoundError):
+        if json_output:
+            output_error_json(
+                code="NOT_FOUND",
+                message=str(e),
+                details={"status_code": e.status_code} if e.status_code else None,
+            )
+        else:
+            error_console.print(f"[red]{entity_name} not found: {e}[/red]")
+    elif isinstance(e, MetabaseAPIError):
+        if json_output:
+            output_error_json(
+                code="API_ERROR",
+                message=str(e),
+                details={"status_code": e.status_code} if e.status_code else None,
+            )
+        else:
+            error_console.print(f"[red]API error: {e}[/red]")
+    else:
+        if json_output:
+            output_error_json(code="ERROR", message=str(e))
+        else:
+            error_console.print(f"[red]Error: {e}[/red]")
+
+
+def get_collection_path(item_or_collection: dict) -> str:
+    """Get the collection path as a human-readable string.
+
+    This works for both:
+    - Items that have a 'collection' field (cards, dashboards)
+    - Collection objects directly
+
+    Args:
+        item_or_collection: A dict containing collection info
+
+    Returns:
+        Human-readable collection path string
+    """
+    # Check if this is an item with a collection field or a collection itself
+    collection = item_or_collection.get("collection") or item_or_collection
+    if not collection or not isinstance(collection, dict):
+        return "Root Collection"
+
+    # Try to build path from effective_ancestors if available
+    ancestors = collection.get("effective_ancestors", [])
+    if ancestors:
+        path_parts = [a.get("name", "") for a in ancestors if a.get("name")]
+        path_parts.append(collection.get("name", ""))
+        return " / ".join(path_parts)
+
+    # Fallback to just collection name
+    return collection.get("name", "Root Collection")

@@ -7,11 +7,11 @@ from typing import Annotated, Any
 import typer
 from rich.table import Table
 
-from ..client.base import MetabaseAPIError, NotFoundError
 from ..context import get_context
 from ..logging import console, error_console
 from ..output import (
     create_export_dir,
+    handle_api_error,
     output_error_json,
     output_json,
     write_csv_file,
@@ -19,33 +19,6 @@ from ..output import (
 )
 
 app = typer.Typer(name="cards", help="Card/query operations.")
-
-
-def _handle_error(e: Exception, json_output: bool) -> None:
-    """Handle API errors consistently."""
-    if isinstance(e, NotFoundError):
-        if json_output:
-            output_error_json(
-                code="NOT_FOUND",
-                message=str(e),
-                details={"status_code": e.status_code} if e.status_code else None,
-            )
-        else:
-            error_console.print(f"[red]Card not found: {e}[/red]")
-    elif isinstance(e, MetabaseAPIError):
-        if json_output:
-            output_error_json(
-                code="API_ERROR",
-                message=str(e),
-                details={"status_code": e.status_code} if e.status_code else None,
-            )
-        else:
-            error_console.print(f"[red]API error: {e}[/red]")
-    else:
-        if json_output:
-            output_error_json(code="ERROR", message=str(e))
-        else:
-            error_console.print(f"[red]Error: {e}[/red]")
 
 
 def _convert_query_result_to_csv(
@@ -166,7 +139,7 @@ def list_cards(
             console.print(table)
 
     except Exception as e:
-        _handle_error(e, json_output)
+        handle_api_error(e, json_output, "Card")
         raise typer.Exit(1) from None
 
 
@@ -229,7 +202,7 @@ def get_card(
                 console.print("\n[yellow]This card is archived[/yellow]")
 
     except Exception as e:
-        _handle_error(e, json_output)
+        handle_api_error(e, json_output, "Card")
         raise typer.Exit(1) from None
 
 
@@ -314,7 +287,7 @@ def run_card(
             console.print(f"  - {csv_path}")
 
     except Exception as e:
-        _handle_error(e, json_output)
+        handle_api_error(e, json_output, "Card")
         raise typer.Exit(1) from None
 
 
@@ -441,7 +414,7 @@ def import_card(
     except typer.Exit:
         raise
     except Exception as e:
-        _handle_error(e, json_output=True)
+        handle_api_error(e, json_output=True, entity_name="Card")
         raise typer.Exit(1) from None
 
 
@@ -472,7 +445,7 @@ def archive_card(
             console.print(f"[green]Card {card_id} archived successfully.[/green]")
 
     except Exception as e:
-        _handle_error(e, json_output)
+        handle_api_error(e, json_output, "Card")
         raise typer.Exit(1) from None
 
 
@@ -521,5 +494,5 @@ def delete_card(
     except typer.Exit:
         raise
     except Exception as e:
-        _handle_error(e, json_output)
+        handle_api_error(e, json_output, "Card")
         raise typer.Exit(1) from None

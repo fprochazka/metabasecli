@@ -23,8 +23,6 @@ ENV_PASSWORD = "METABASE_PASSWORD"
 class ConfigError(Exception):
     """Raised when there's a configuration error."""
 
-    pass
-
 
 def get_config_path() -> Path:
     """Get the path to the config file."""

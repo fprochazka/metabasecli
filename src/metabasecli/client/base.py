@@ -37,19 +37,13 @@ class MetabaseAPIError(Exception):
 class AuthenticationError(MetabaseAPIError):
     """Raised when authentication fails."""
 
-    pass
-
 
 class NotFoundError(MetabaseAPIError):
     """Raised when a resource is not found."""
 
-    pass
-
 
 class SessionExpiredError(AuthenticationError):
     """Raised when the session has expired."""
-
-    pass
 
 
 class BaseClient:

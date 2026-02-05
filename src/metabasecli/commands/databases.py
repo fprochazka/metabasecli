@@ -6,39 +6,11 @@ import typer
 from rich.table import Table
 from rich.tree import Tree
 
-from ..client.base import MetabaseAPIError, NotFoundError
 from ..context import get_context
-from ..logging import console, error_console
-from ..output import output_error_json, output_json
+from ..logging import console
+from ..output import handle_api_error, output_json
 
 app = typer.Typer(name="databases", help="Database operations.")
-
-
-def _handle_error(e: Exception, json_output: bool) -> None:
-    """Handle API errors consistently."""
-    if isinstance(e, NotFoundError):
-        if json_output:
-            output_error_json(
-                code="NOT_FOUND",
-                message=str(e),
-                details={"status_code": e.status_code} if e.status_code else None,
-            )
-        else:
-            error_console.print(f"[red]Database not found: {e}[/red]")
-    elif isinstance(e, MetabaseAPIError):
-        if json_output:
-            output_error_json(
-                code="API_ERROR",
-                message=str(e),
-                details={"status_code": e.status_code} if e.status_code else None,
-            )
-        else:
-            error_console.print(f"[red]API error: {e}[/red]")
-    else:
-        if json_output:
-            output_error_json(code="ERROR", message=str(e))
-        else:
-            error_console.print(f"[red]Error: {e}[/red]")
 
 
 @app.command("list")
@@ -103,7 +75,7 @@ def list_databases(
             console.print(table)
 
     except Exception as e:
-        _handle_error(e, json_output)
+        handle_api_error(e, json_output, "Database")
         raise typer.Exit(1) from None
 
 
@@ -169,7 +141,7 @@ def get_database(
                             console.print(f"      {field_name}: {type_info}")
 
     except Exception as e:
-        _handle_error(e, json_output)
+        handle_api_error(e, json_output, "Database")
         raise typer.Exit(1) from None
 
 
@@ -243,7 +215,7 @@ def get_metadata(
             console.print(tree)
 
     except Exception as e:
-        _handle_error(e, json_output)
+        handle_api_error(e, json_output, "Database")
         raise typer.Exit(1) from None
 
 
@@ -274,5 +246,5 @@ def list_schemas(
                 console.print(f"  - {schema}")
 
     except Exception as e:
-        _handle_error(e, json_output)
+        handle_api_error(e, json_output, "Database")
         raise typer.Exit(1) from None

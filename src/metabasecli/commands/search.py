@@ -6,54 +6,9 @@ from typing import Annotated
 import typer
 from rich.table import Table
 
-from ..client.base import MetabaseAPIError, NotFoundError
 from ..context import get_context
-from ..logging import console, error_console
-from ..output import output_error_json, output_json
-
-
-def _handle_error(e: Exception, json_output: bool) -> None:
-    """Handle API errors consistently."""
-    if isinstance(e, NotFoundError):
-        if json_output:
-            output_error_json(
-                code="NOT_FOUND",
-                message=str(e),
-                details={"status_code": e.status_code} if e.status_code else None,
-            )
-        else:
-            error_console.print(f"[red]Not found: {e}[/red]")
-    elif isinstance(e, MetabaseAPIError):
-        if json_output:
-            output_error_json(
-                code="API_ERROR",
-                message=str(e),
-                details={"status_code": e.status_code} if e.status_code else None,
-            )
-        else:
-            error_console.print(f"[red]API error: {e}[/red]")
-    else:
-        if json_output:
-            output_error_json(code="ERROR", message=str(e))
-        else:
-            error_console.print(f"[red]Error: {e}[/red]")
-
-
-def _get_collection_path(item: dict) -> str:
-    """Get the collection path for an item."""
-    collection = item.get("collection") or {}
-    if not collection:
-        return "Root Collection"
-
-    # Try to build path from effective_ancestors if available
-    ancestors = collection.get("effective_ancestors", [])
-    if ancestors:
-        path_parts = [a.get("name", "") for a in ancestors if a.get("name")]
-        path_parts.append(collection.get("name", ""))
-        return " / ".join(path_parts)
-
-    # Fallback to just collection name
-    return collection.get("name", "Root Collection")
+from ..logging import console
+from ..output import get_collection_path, handle_api_error, output_json
 
 
 def search_command(
@@ -202,7 +157,7 @@ def search_command(
                 for item in items:
                     item_id = str(item.get("id", ""))
                     name = item.get("name", "")
-                    location = _get_collection_path(item)
+                    location = get_collection_path(item)
 
                     table.add_row(item_id, name, location)
 
@@ -223,7 +178,7 @@ def search_command(
                 for item in items:
                     item_id = str(item.get("id", ""))
                     name = item.get("name", "")
-                    location = _get_collection_path(item)
+                    location = get_collection_path(item)
 
                     table.add_row(item_id, name, location)
 
@@ -231,5 +186,5 @@ def search_command(
                 console.print()
 
     except Exception as e:
-        _handle_error(e, json_output)
+        handle_api_error(e, json_output)
         raise typer.Exit(1) from None
