@@ -9,6 +9,7 @@ from .cards import CardsClient
 from .collections import CollectionsClient
 from .dashboards import DashboardsClient
 from .databases import DatabasesClient
+from .search import SearchClient
 
 __all__ = [
     "BaseClient",
@@ -18,4 +19,5 @@ __all__ = [
     "CollectionsClient",
     "CardsClient",
     "DashboardsClient",
+    "SearchClient",
 ]

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from .collections import CollectionsClient
     from .dashboards import DashboardsClient
     from .databases import DatabasesClient
+    from .search import SearchClient
 
 from ..models.auth import AuthConfig, AuthMethod
 
@@ -268,6 +269,7 @@ class MetabaseClient(BaseClient):
         self._collections: CollectionsClient | None = None
         self._cards: CardsClient | None = None
         self._dashboards: DashboardsClient | None = None
+        self._search: SearchClient | None = None
 
     @property
     def auth(self) -> AuthClient:
@@ -313,3 +315,12 @@ class MetabaseClient(BaseClient):
 
             self._dashboards = DashboardsClient(self)
         return self._dashboards
+
+    @property
+    def search(self) -> SearchClient:
+        """Get the search client."""
+        if self._search is None:
+            from .search import SearchClient
+
+            self._search = SearchClient(self)
+        return self._search
