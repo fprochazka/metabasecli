@@ -1,5 +1,6 @@
 """Card (saved question/query) models."""
 
+import contextlib
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -53,3 +54,79 @@ class Card:
     # Raw API response for export
     raw_data: dict[str, Any] = field(default_factory=dict)
     extra: dict = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Card":
+        """Create a Card instance from an API response dictionary.
+
+        Args:
+            data: Dictionary from Metabase API response.
+
+        Returns:
+            Card instance with populated fields.
+        """
+        # Parse dataset_query if present
+        dataset_query = None
+        dq = data.get("dataset_query")
+        if dq:
+            query_type = dq.get("type", "query")
+            database = dq.get("database", 0)
+            native_query = None
+            template_tags = {}
+            mbql_query = {}
+
+            if query_type == "native" and "native" in dq:
+                native_query = dq["native"].get("query")
+                template_tags = dq["native"].get("template-tags", {})
+            elif "query" in dq:
+                mbql_query = dq["query"]
+
+            dataset_query = CardQuery(
+                query_type=query_type,
+                database=database,
+                native_query=native_query,
+                template_tags=template_tags,
+                mbql_query=mbql_query,
+            )
+
+        # Parse visualization_settings if present
+        viz_settings = None
+        vs = data.get("visualization_settings")
+        if vs:
+            viz_settings = VisualizationSettings(
+                display=data.get("display", "table"),
+                settings=vs,
+            )
+
+        # Parse dates
+        created_at = None
+        if data.get("created_at"):
+            with contextlib.suppress(ValueError, AttributeError):
+                created_at = datetime.fromisoformat(data["created_at"].replace("Z", "+00:00"))
+
+        updated_at = None
+        if data.get("updated_at"):
+            with contextlib.suppress(ValueError, AttributeError):
+                updated_at = datetime.fromisoformat(data["updated_at"].replace("Z", "+00:00"))
+
+        # Get collection info
+        collection = data.get("collection") or {}
+        collection_name = collection.get("name") if isinstance(collection, dict) else None
+
+        return cls(
+            id=data.get("id", 0),
+            name=data.get("name", ""),
+            description=data.get("description"),
+            collection_id=data.get("collection_id"),
+            database_id=data.get("database_id"),
+            dataset_query=dataset_query,
+            display=data.get("display", "table"),
+            visualization_settings=viz_settings,
+            parameters=data.get("parameters", []),
+            archived=data.get("archived", False),
+            created_at=created_at,
+            updated_at=updated_at,
+            collection_name=collection_name,
+            database_name=data.get("database", {}).get("name") if isinstance(data.get("database"), dict) else None,
+            raw_data=data,
+        )
