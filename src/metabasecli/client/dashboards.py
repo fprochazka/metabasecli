@@ -26,9 +26,7 @@ class DashboardsClient:
         """Create a new dashboard."""
         raise NotImplementedError("Create dashboard not implemented")
 
-    def update(
-        self, dashboard_id: int, dashboard_data: dict[str, Any]
-    ) -> dict[str, Any]:
+    def update(self, dashboard_id: int, dashboard_data: dict[str, Any]) -> dict[str, Any]:
         """Update an existing dashboard."""
         raise NotImplementedError("Update dashboard not implemented")
 

@@ -40,9 +40,7 @@ class Context:
         if self._client is None:
             config = self.config
             if config is None:
-                raise RuntimeError(
-                    "Not authenticated. Run 'metabase auth login' first or set environment variables."
-                )
+                raise RuntimeError("Not authenticated. Run 'metabase auth login' first or set environment variables.")
 
             from .client import MetabaseClient
 

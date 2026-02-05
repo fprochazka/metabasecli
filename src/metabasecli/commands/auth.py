@@ -84,10 +84,7 @@ def login(
         }
         auth_method = method_map.get(method.lower())
         if not auth_method:
-            error_console.print(
-                f"[red]Invalid auth method: {method}. "
-                "Use api_key, session_id, or credentials.[/red]"
-            )
+            error_console.print(f"[red]Invalid auth method: {method}. Use api_key, session_id, or credentials.[/red]")
             raise typer.Exit(1)
     else:
         auth_method = _prompt_auth_method()
@@ -277,18 +274,20 @@ def status(
         user_info = client.auth.get_current_user()
 
         if json_output:
-            output_json({
-                "authenticated": True,
-                "auth_method": config.auth_method.value,
-                "user": {
-                    "id": user_info.get("id"),
-                    "email": user_info.get("email"),
-                    "first_name": user_info.get("first_name"),
-                    "last_name": user_info.get("last_name"),
-                    "is_superuser": user_info.get("is_superuser", False),
-                },
-                "instance_url": config.url,
-            })
+            output_json(
+                {
+                    "authenticated": True,
+                    "auth_method": config.auth_method.value,
+                    "user": {
+                        "id": user_info.get("id"),
+                        "email": user_info.get("email"),
+                        "first_name": user_info.get("first_name"),
+                        "last_name": user_info.get("last_name"),
+                        "is_superuser": user_info.get("is_superuser", False),
+                    },
+                    "instance_url": config.url,
+                }
+            )
         else:
             console.print(f"[green]Authenticated as:[/green] {user_info.get('email', 'Unknown')}")
             name = f"{user_info.get('first_name', '')} {user_info.get('last_name', '')}".strip()
@@ -301,12 +300,14 @@ def status(
 
     except AuthenticationError:
         if json_output:
-            output_json({
-                "authenticated": False,
-                "auth_method": config.auth_method.value,
-                "instance_url": config.url,
-                "error": "Session expired or invalid",
-            })
+            output_json(
+                {
+                    "authenticated": False,
+                    "auth_method": config.auth_method.value,
+                    "instance_url": config.url,
+                    "error": "Session expired or invalid",
+                }
+            )
         else:
             console.print("[red]Session expired or invalid.[/red]")
             console.print(f"[dim]Instance: {config.url}[/dim]")
