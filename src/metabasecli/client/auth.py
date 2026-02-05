@@ -1,4 +1,7 @@
-"""Authentication-related API calls."""
+"""Authentication-related API calls.
+
+Provides methods for login, logout, and session validation against the Metabase API.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +10,8 @@ from typing import TYPE_CHECKING, Any
 import httpx
 
 from ..constants import HTTP_TIMEOUT_SECONDS
+
+__all__ = ["AuthClient"]
 
 if TYPE_CHECKING:
     from .base import BaseClient

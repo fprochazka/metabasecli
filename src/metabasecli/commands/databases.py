@@ -1,4 +1,8 @@
-"""Database commands."""
+"""Database commands.
+
+Provides commands for listing databases, viewing database details,
+metadata, and schemas.
+"""
 
 from typing import Annotated
 

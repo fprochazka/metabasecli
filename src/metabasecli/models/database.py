@@ -1,7 +1,12 @@
-"""Database-related models."""
+"""Database-related models.
+
+Contains dataclasses for Metabase database, table, and field objects.
+"""
 
 from dataclasses import dataclass, field
 from typing import Any
+
+__all__ = ["Field", "Table", "Database"]
 
 
 @dataclass

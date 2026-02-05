@@ -1,9 +1,14 @@
-"""Authentication-related models."""
+"""Authentication-related models.
+
+Contains dataclasses for authentication configuration and session information.
+"""
 
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
+
+__all__ = ["AuthMethod", "AuthConfig", "SessionInfo"]
 
 
 class AuthMethod(StrEnum):

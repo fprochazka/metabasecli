@@ -1,4 +1,8 @@
-"""Search command."""
+"""Search command.
+
+Provides global search functionality across all Metabase entities including
+cards, dashboards, collections, databases, tables, and more.
+"""
 
 from collections import defaultdict
 from typing import Annotated

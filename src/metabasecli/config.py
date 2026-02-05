@@ -8,6 +8,15 @@ from pathlib import Path
 
 from .models.auth import AuthConfig, AuthMethod
 
+__all__ = [
+    "ConfigError",
+    "get_config_path",
+    "ensure_config_dir",
+    "load_config",
+    "save_config",
+    "update_session_id",
+]
+
 # Default config directory
 DEFAULT_CONFIG_DIR = Path.home() / ".config" / "metabasecli"
 DEFAULT_CONFIG_FILE = DEFAULT_CONFIG_DIR / "config.toml"

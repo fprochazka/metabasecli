@@ -1,10 +1,15 @@
-"""Dashboard-related models."""
+"""Dashboard-related models.
+
+Contains dataclasses for Metabase dashboards and dashboard cards.
+"""
 
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
 from ..utils import parse_datetime
+
+__all__ = ["DashCard", "Dashboard"]
 
 
 @dataclass

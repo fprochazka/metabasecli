@@ -1,7 +1,9 @@
-"""Shared utility functions."""
+"""Shared utility functions for the Metabase CLI."""
 
 import contextlib
 from datetime import datetime
+
+__all__ = ["parse_datetime"]
 
 
 def parse_datetime(value: str | None) -> datetime | None:

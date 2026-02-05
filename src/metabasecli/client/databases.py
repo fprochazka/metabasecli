@@ -1,8 +1,13 @@
-"""Database-related API calls."""
+"""Database-related API calls.
+
+Provides methods for listing, retrieving, and syncing databases in Metabase.
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+
+__all__ = ["DatabasesClient"]
 
 if TYPE_CHECKING:
     from .base import BaseClient

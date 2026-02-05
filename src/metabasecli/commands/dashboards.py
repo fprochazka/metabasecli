@@ -1,4 +1,8 @@
-"""Dashboard commands."""
+"""Dashboard commands.
+
+Provides commands for managing Metabase dashboards including listing, viewing,
+exporting/importing, revisions, and archiving/deleting dashboards.
+"""
 
 import json
 import sys

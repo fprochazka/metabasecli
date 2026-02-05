@@ -1,4 +1,8 @@
-"""Card (saved question) commands."""
+"""Card (saved question) commands.
+
+Provides commands for managing Metabase cards including listing, viewing,
+running queries, importing, and archiving/deleting cards.
+"""
 
 import json
 import sys

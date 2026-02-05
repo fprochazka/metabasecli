@@ -1,10 +1,15 @@
-"""Collection-related models."""
+"""Collection-related models.
+
+Contains dataclasses for Metabase collections and collection items.
+"""
 
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
 from ..utils import parse_datetime
+
+__all__ = ["Collection", "CollectionItem"]
 
 
 @dataclass

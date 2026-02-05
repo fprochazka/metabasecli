@@ -1,10 +1,15 @@
-"""Card (saved question/query) models."""
+"""Card (saved question/query) models.
+
+Contains dataclasses for Metabase cards (saved questions) and their components.
+"""
 
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
 from ..utils import parse_datetime
+
+__all__ = ["VisualizationSettings", "CardQuery", "Card"]
 
 
 @dataclass

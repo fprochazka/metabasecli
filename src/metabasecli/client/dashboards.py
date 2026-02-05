@@ -1,8 +1,13 @@
-"""Dashboard-related API calls."""
+"""Dashboard-related API calls.
+
+Provides methods for managing Metabase dashboards, including revisions and revert.
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+
+__all__ = ["DashboardsClient"]
 
 if TYPE_CHECKING:
     from .base import BaseClient

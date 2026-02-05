@@ -1,9 +1,17 @@
+"""Global context management for the CLI.
+
+Provides a shared context object that holds configuration and client instances
+across all CLI commands.
+"""
+
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .client import MetabaseClient
     from .models.auth import AuthConfig
+
+__all__ = ["Context", "get_context"]
 
 
 @dataclass

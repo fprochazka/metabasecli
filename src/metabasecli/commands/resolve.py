@@ -1,7 +1,11 @@
-"""Resolve command for parsing Metabase URLs."""
+"""Resolve command for parsing Metabase URLs.
+
+Parses Metabase URLs and retrieves information about the referenced entity,
+supporting questions, dashboards, collections, and databases.
+"""
 
 import re
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 from urllib.parse import urlparse
 
 import typer
@@ -10,6 +14,9 @@ from rich.table import Table
 from ..context import get_context
 from ..logging import console, error_console
 from ..output import get_collection_path_parts, handle_api_error, output_error_json, output_json
+
+if TYPE_CHECKING:
+    from ..client import MetabaseClient
 
 # Entity type mappings from URL path to API entity type
 URL_PATH_PATTERNS = {
@@ -102,8 +109,16 @@ def _extract_id(id_part: str) -> int | None:
     return None
 
 
-def _fetch_card(client, card_id: int) -> dict:
-    """Fetch card and format for output."""
+def _fetch_card(client: "MetabaseClient", card_id: int) -> dict[str, Any]:
+    """Fetch card and format for output.
+
+    Args:
+        client: The Metabase API client.
+        card_id: The ID of the card to fetch.
+
+    Returns:
+        A dictionary containing entity_type, entity_id, entity details, and raw data.
+    """
     card = client.cards.get(card_id)
 
     # Get collection info
@@ -137,8 +152,16 @@ def _fetch_card(client, card_id: int) -> dict:
     }
 
 
-def _fetch_dashboard(client, dashboard_id: int) -> dict:
-    """Fetch dashboard and format for output."""
+def _fetch_dashboard(client: "MetabaseClient", dashboard_id: int) -> dict[str, Any]:
+    """Fetch dashboard and format for output.
+
+    Args:
+        client: The Metabase API client.
+        dashboard_id: The ID of the dashboard to fetch.
+
+    Returns:
+        A dictionary containing entity_type, entity_id, entity details, and raw data.
+    """
     dashboard = client.dashboards.get(dashboard_id)
 
     # Get collection info
@@ -174,8 +197,16 @@ def _fetch_dashboard(client, dashboard_id: int) -> dict:
     }
 
 
-def _fetch_collection(client, collection_id: int) -> dict:
-    """Fetch collection and format for output."""
+def _fetch_collection(client: "MetabaseClient", collection_id: int) -> dict[str, Any]:
+    """Fetch collection and format for output.
+
+    Args:
+        client: The Metabase API client.
+        collection_id: The ID of the collection to fetch.
+
+    Returns:
+        A dictionary containing entity_type, entity_id, entity details, and raw data.
+    """
     collection = client.collections.get(collection_id)
 
     # Get parent collection path
@@ -202,8 +233,17 @@ def _fetch_collection(client, collection_id: int) -> dict:
     }
 
 
-def _fetch_database(client, database_id: int, schema_name: str | None = None) -> dict:
-    """Fetch database and format for output."""
+def _fetch_database(client: "MetabaseClient", database_id: int, schema_name: str | None = None) -> dict[str, Any]:
+    """Fetch database and format for output.
+
+    Args:
+        client: The Metabase API client.
+        database_id: The ID of the database to fetch.
+        schema_name: Optional schema name if URL included a schema path.
+
+    Returns:
+        A dictionary containing entity_type, entity_id, entity details, and raw data.
+    """
     database = client.databases.get(database_id)
 
     result = {
@@ -307,8 +347,13 @@ def resolve_command(
         raise typer.Exit(1) from None
 
 
-def _print_human_output(url: str, result: dict) -> None:
-    """Print human-readable output for the resolved entity."""
+def _print_human_output(url: str, result: dict[str, Any]) -> None:
+    """Print human-readable output for the resolved entity.
+
+    Args:
+        url: The original URL that was resolved.
+        result: The fetch result dictionary containing entity information.
+    """
     entity = result["entity"]
     entity_type = result["entity_type"]
 

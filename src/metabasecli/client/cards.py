@@ -1,8 +1,13 @@
-"""Card-related API calls."""
+"""Card-related API calls.
+
+Provides methods for managing Metabase cards (saved questions/queries).
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+
+__all__ = ["CardsClient"]
 
 if TYPE_CHECKING:
     from .base import BaseClient

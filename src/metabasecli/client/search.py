@@ -1,8 +1,13 @@
-"""Search-related API calls."""
+"""Search-related API calls.
+
+Provides methods for searching across all Metabase entities.
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+
+__all__ = ["SearchClient"]
 
 if TYPE_CHECKING:
     from .base import BaseClient

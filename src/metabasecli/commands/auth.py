@@ -1,4 +1,8 @@
-"""Authentication commands."""
+"""Authentication commands.
+
+Provides commands for logging in, logging out, checking authentication status,
+and retrieving the current session token.
+"""
 
 from typing import Annotated
 

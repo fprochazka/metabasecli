@@ -1,4 +1,8 @@
-"""Output formatting and file handling utilities."""
+"""Output formatting and file handling utilities.
+
+This module provides functions for formatting CLI output, writing export files,
+and handling API errors consistently across all commands.
+"""
 
 import json
 from datetime import datetime
@@ -8,6 +12,18 @@ from typing import Any
 from .client.base import MetabaseAPIError, NotFoundError
 from .constants import EXPORT_VERSION
 from .logging import console, error_console
+
+__all__ = [
+    "create_export_dir",
+    "write_json_file",
+    "write_export_file",
+    "write_csv_file",
+    "output_json",
+    "output_error_json",
+    "handle_api_error",
+    "get_collection_path",
+    "get_collection_path_parts",
+]
 
 
 def create_export_dir() -> Path:

@@ -1,4 +1,8 @@
-"""Collection commands."""
+"""Collection commands.
+
+Provides commands for managing Metabase collections, including listing,
+creating, updating, and archiving collections.
+"""
 
 from typing import Annotated
 

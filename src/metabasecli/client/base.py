@@ -1,4 +1,8 @@
-"""Base client with session management and request helpers."""
+"""Base client with session management and request helpers.
+
+This module provides the core HTTP client functionality for the Metabase API,
+including authentication, session management, and automatic session refresh.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +10,15 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import httpx
+
+__all__ = [
+    "MetabaseAPIError",
+    "AuthenticationError",
+    "NotFoundError",
+    "SessionExpiredError",
+    "BaseClient",
+    "MetabaseClient",
+]
 
 if TYPE_CHECKING:
     from .auth import AuthClient

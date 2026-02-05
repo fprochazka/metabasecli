@@ -1,4 +1,23 @@
-"""Shared constants used across the application."""
+"""Shared constants used across the application.
+
+This module contains configuration values and constants that are shared
+across multiple modules in the Metabase CLI.
+"""
+
+__all__ = [
+    "EXPORT_VERSION",
+    "HTTP_TIMEOUT_SECONDS",
+    "MODEL_CARD",
+    "MODEL_DASHBOARD",
+    "MODEL_COLLECTION",
+    "MODEL_DATABASE",
+    "MODEL_TABLE",
+    "MODEL_DATASET",
+    "MODEL_METRIC",
+    "MODEL_SEGMENT",
+    "MODEL_ACTION",
+    "SEARCHABLE_MODELS",
+]
 
 # Export file format version
 EXPORT_VERSION = "1.0"

@@ -1,8 +1,13 @@
-"""Collection-related API calls."""
+"""Collection-related API calls.
+
+Provides methods for managing Metabase collections (folders for organizing content).
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+
+__all__ = ["CollectionsClient"]
 
 if TYPE_CHECKING:
     from .base import BaseClient
