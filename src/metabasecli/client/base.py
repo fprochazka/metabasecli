@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from .databases import DatabasesClient
     from .search import SearchClient
 
+from ..constants import HTTP_TIMEOUT_SECONDS
 from ..models.auth import AuthConfig, AuthMethod
 
 logger = logging.getLogger(__name__)
@@ -82,7 +83,7 @@ class BaseClient:
                     "Content-Type": "application/json",
                     **self._get_auth_headers(),
                 },
-                timeout=30.0,
+                timeout=HTTP_TIMEOUT_SECONDS,
             )
         return self._client
 
@@ -119,7 +120,7 @@ class BaseClient:
                     "password": self.config.password,
                 },
                 headers={"Content-Type": "application/json"},
-                timeout=30.0,
+                timeout=HTTP_TIMEOUT_SECONDS,
             )
 
             if response.status_code != 200:

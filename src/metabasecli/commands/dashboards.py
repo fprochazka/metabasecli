@@ -10,6 +10,7 @@ import typer
 from rich.table import Table
 
 from ..client.base import NotFoundError
+from ..constants import EXPORT_VERSION
 from ..context import get_context
 from ..logging import console
 from ..models.dashboard import Dashboard
@@ -299,7 +300,7 @@ def export_dashboard(
 
         # Write manifest
         manifest = {
-            "export_version": "1.0",
+            "export_version": EXPORT_VERSION,
             "export_timestamp": datetime.now().isoformat() + "Z",
             "source": {
                 "instance_url": config.url if config else "",

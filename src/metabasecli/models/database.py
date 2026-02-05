@@ -17,7 +17,7 @@ class Field:
     description: str | None = None
     visibility_type: str = "normal"
     active: bool = True
-    extra: dict = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Field":
@@ -64,7 +64,7 @@ class Table:
     visibility_type: str = "normal"
     active: bool = True
     fields: list[Field] = field(default_factory=list)
-    extra: dict = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Table":
@@ -109,11 +109,11 @@ class Database:
     name: str
     engine: str
     description: str | None = None
-    details: dict = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
     is_sample: bool = False
     tables_count: int = 0
     tables: list[Table] = field(default_factory=list)
-    extra: dict = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Database":

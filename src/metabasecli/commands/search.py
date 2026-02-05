@@ -6,6 +6,7 @@ from typing import Annotated
 import typer
 from rich.table import Table
 
+from ..constants import SEARCHABLE_MODELS
 from ..context import get_context
 from ..logging import console
 from ..output import get_collection_path, handle_api_error, output_json
@@ -128,21 +129,8 @@ def search_command(
                 type_counts.append(f"{model_type}: {len(items)}")
             console.print(f"[dim]By type: {', '.join(type_counts)}[/dim]\n")
 
-            # Define display order for model types
-            model_order = [
-                "dashboard",
-                "card",
-                "collection",
-                "table",
-                "database",
-                "dataset",
-                "metric",
-                "segment",
-                "action",
-            ]
-
-            # Print each group
-            for model_type in model_order:
+            # Print each group in defined order
+            for model_type in SEARCHABLE_MODELS:
                 if model_type not in grouped:
                     continue
 
@@ -165,7 +153,7 @@ def search_command(
                 console.print()
 
             # Print any remaining types not in the predefined order
-            remaining = set(grouped.keys()) - set(model_order)
+            remaining = set(grouped.keys()) - set(SEARCHABLE_MODELS)
             for model_type in sorted(remaining):
                 items = grouped[model_type]
                 console.print(f"[bold cyan]{model_type.upper()}S ({len(items)})[/bold cyan]")

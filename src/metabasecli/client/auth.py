@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from ..constants import HTTP_TIMEOUT_SECONDS
+
 if TYPE_CHECKING:
     from .base import BaseClient
 
@@ -30,7 +32,7 @@ class AuthClient:
             f"{self._client.base_url}/session",
             json={"username": username, "password": password},
             headers={"Content-Type": "application/json"},
-            timeout=30.0,
+            timeout=HTTP_TIMEOUT_SECONDS,
         )
         return self._client._handle_response(response)
 
@@ -48,7 +50,7 @@ class AuthClient:
                 "Content-Type": "application/json",
                 "x-metabase-session": session_id,
             },
-            timeout=30.0,
+            timeout=HTTP_TIMEOUT_SECONDS,
         )
         # Ignore 401 errors during logout (session already invalid)
         if response.status_code not in (200, 204, 401):

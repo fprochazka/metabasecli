@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .client.base import MetabaseAPIError, NotFoundError
+from .constants import EXPORT_VERSION
 from .logging import console, error_console
 
 
@@ -56,7 +57,7 @@ def write_export_file(
         Full path to the written file.
     """
     export_data = {
-        "export_version": "1.0",
+        "export_version": EXPORT_VERSION,
         "export_timestamp": datetime.now().isoformat() + "Z",
         "type": export_type,
         "source": source_info or {},
@@ -171,17 +172,40 @@ def get_collection_path(item_or_collection: dict) -> str:
     Returns:
         Human-readable collection path string
     """
+    _, path_parts = get_collection_path_parts(item_or_collection)
+    if not path_parts:
+        return "Root Collection"
+    return " / ".join(path_parts)
+
+
+def get_collection_path_parts(item_or_collection: dict) -> tuple[str, list[str]]:
+    """Get the collection path as both a formatted string and list of parts.
+
+    This works for both:
+    - Items that have a 'collection' field (cards, dashboards)
+    - Collection objects directly
+
+    Args:
+        item_or_collection: A dict containing collection info
+
+    Returns:
+        Tuple of (formatted_path_string, path_parts_list)
+        The formatted string uses "/" as separator and starts with "/"
+    """
     # Check if this is an item with a collection field or a collection itself
     collection = item_or_collection.get("collection") or item_or_collection
     if not collection or not isinstance(collection, dict):
-        return "Root Collection"
+        return ("Root Collection", [])
 
     # Try to build path from effective_ancestors if available
     ancestors = collection.get("effective_ancestors", [])
     if ancestors:
         path_parts = [a.get("name", "") for a in ancestors if a.get("name")]
         path_parts.append(collection.get("name", ""))
-        return " / ".join(path_parts)
+        return ("/" + "/".join(path_parts), path_parts)
 
     # Fallback to just collection name
-    return collection.get("name", "Root Collection")
+    name = collection.get("name", "Root Collection")
+    if name == "Root Collection":
+        return ("Root Collection", [])
+    return (f"/{name}", [name])

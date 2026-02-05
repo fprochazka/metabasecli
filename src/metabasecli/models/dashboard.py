@@ -1,9 +1,10 @@
 """Dashboard-related models."""
 
-import contextlib
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
+
+from ..utils import parse_datetime
 
 
 @dataclass
@@ -16,9 +17,9 @@ class DashCard:
     col: int = 0
     size_x: int = 4
     size_y: int = 4
-    parameter_mappings: list[dict] = field(default_factory=list)
-    visualization_settings: dict = field(default_factory=dict)
-    extra: dict = field(default_factory=dict)
+    parameter_mappings: list[dict[str, Any]] = field(default_factory=list)
+    visualization_settings: dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "DashCard":
@@ -66,9 +67,9 @@ class Dashboard:
     description: str | None = None
     collection_id: int | None = None
     archived: bool = False
-    parameters: list[dict] = field(default_factory=list)
+    parameters: list[dict[str, Any]] = field(default_factory=list)
     dashcards: list[DashCard] = field(default_factory=list)
-    tabs: list[dict] = field(default_factory=list)
+    tabs: list[dict[str, Any]] = field(default_factory=list)
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -77,11 +78,11 @@ class Dashboard:
     collection_path: list[str] = field(default_factory=list)
 
     # Referenced cards (populated with --include-cards)
-    referenced_cards: dict[int, dict] = field(default_factory=dict)
+    referenced_cards: dict[int, dict[str, Any]] = field(default_factory=dict)
 
     # Raw API response for export
     raw_data: dict[str, Any] = field(default_factory=dict)
-    extra: dict = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Dashboard":
@@ -100,15 +101,8 @@ class Dashboard:
             dashcards.append(DashCard.from_dict(dc))
 
         # Parse dates
-        created_at = None
-        if data.get("created_at"):
-            with contextlib.suppress(ValueError, AttributeError):
-                created_at = datetime.fromisoformat(data["created_at"].replace("Z", "+00:00"))
-
-        updated_at = None
-        if data.get("updated_at"):
-            with contextlib.suppress(ValueError, AttributeError):
-                updated_at = datetime.fromisoformat(data["updated_at"].replace("Z", "+00:00"))
+        created_at = parse_datetime(data.get("created_at"))
+        updated_at = parse_datetime(data.get("updated_at"))
 
         # Get collection info
         collection = data.get("collection") or {}

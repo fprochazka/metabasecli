@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
 
 class AuthMethod(StrEnum):
@@ -45,4 +46,4 @@ class SessionInfo:
     is_superuser: bool = False
     instance_url: str | None = None
     session_expires: datetime | None = None
-    extra: dict = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)

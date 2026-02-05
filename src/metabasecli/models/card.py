@@ -1,9 +1,10 @@
 """Card (saved question/query) models."""
 
-import contextlib
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
+
+from ..utils import parse_datetime
 
 
 @dataclass
@@ -11,7 +12,7 @@ class VisualizationSettings:
     """Settings for how a card's results are displayed."""
 
     display: str = "table"  # "table", "bar", "line", "pie", etc.
-    settings: dict = field(default_factory=dict)
+    settings: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -23,10 +24,10 @@ class CardQuery:
 
     # For native queries
     native_query: str | None = None
-    template_tags: dict = field(default_factory=dict)
+    template_tags: dict[str, Any] = field(default_factory=dict)
 
     # For MBQL queries
-    mbql_query: dict = field(default_factory=dict)
+    mbql_query: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -41,7 +42,7 @@ class Card:
     dataset_query: CardQuery | None = None
     display: str = "table"
     visualization_settings: VisualizationSettings | None = None
-    parameters: list[dict] = field(default_factory=list)
+    parameters: list[dict[str, Any]] = field(default_factory=list)
     archived: bool = False
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -53,7 +54,7 @@ class Card:
 
     # Raw API response for export
     raw_data: dict[str, Any] = field(default_factory=dict)
-    extra: dict = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Card":
@@ -99,15 +100,8 @@ class Card:
             )
 
         # Parse dates
-        created_at = None
-        if data.get("created_at"):
-            with contextlib.suppress(ValueError, AttributeError):
-                created_at = datetime.fromisoformat(data["created_at"].replace("Z", "+00:00"))
-
-        updated_at = None
-        if data.get("updated_at"):
-            with contextlib.suppress(ValueError, AttributeError):
-                updated_at = datetime.fromisoformat(data["updated_at"].replace("Z", "+00:00"))
+        created_at = parse_datetime(data.get("created_at"))
+        updated_at = parse_datetime(data.get("updated_at"))
 
         # Get collection info
         collection = data.get("collection") or {}

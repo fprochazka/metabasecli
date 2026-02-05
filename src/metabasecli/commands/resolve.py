@@ -9,7 +9,7 @@ from rich.table import Table
 
 from ..context import get_context
 from ..logging import console, error_console
-from ..output import handle_api_error, output_error_json, output_json
+from ..output import get_collection_path_parts, handle_api_error, output_error_json, output_json
 
 # Entity type mappings from URL path to API entity type
 URL_PATH_PATTERNS = {
@@ -102,37 +102,13 @@ def _extract_id(id_part: str) -> int | None:
     return None
 
 
-def _get_collection_path(collection: dict | None) -> tuple[str, list[str]]:
-    """Get the collection path as a string and list.
-
-    Args:
-        collection: Collection dict from API response
-
-    Returns:
-        Tuple of (path_string, path_list)
-    """
-    if not collection:
-        return ("Root Collection", [])
-
-    # Try to build path from effective_ancestors if available
-    ancestors = collection.get("effective_ancestors", [])
-    if ancestors:
-        path_parts = [a.get("name", "") for a in ancestors if a.get("name")]
-        path_parts.append(collection.get("name", ""))
-        return ("/" + "/".join(path_parts), path_parts)
-
-    # Fallback to just collection name
-    name = collection.get("name", "Root Collection")
-    return (f"/{name}" if name != "Root Collection" else "Root Collection", [name] if name != "Root Collection" else [])
-
-
 def _fetch_card(client, card_id: int) -> dict:
     """Fetch card and format for output."""
     card = client.cards.get(card_id)
 
     # Get collection info
     collection = card.get("collection")
-    collection_path_str, collection_path = _get_collection_path(collection)
+    collection_path_str, collection_path = get_collection_path_parts(collection or {})
 
     return {
         "entity_type": "card",
@@ -167,7 +143,7 @@ def _fetch_dashboard(client, dashboard_id: int) -> dict:
 
     # Get collection info
     collection = dashboard.get("collection")
-    collection_path_str, collection_path = _get_collection_path(collection)
+    collection_path_str, collection_path = get_collection_path_parts(collection or {})
 
     # Count dashcards
     dashcards = dashboard.get("dashcards", dashboard.get("ordered_cards", []))
