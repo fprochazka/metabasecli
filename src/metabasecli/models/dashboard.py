@@ -1,5 +1,6 @@
 """Dashboard-related models."""
 
+import contextlib
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -18,6 +19,42 @@ class DashCard:
     parameter_mappings: list[dict] = field(default_factory=list)
     visualization_settings: dict = field(default_factory=dict)
     extra: dict = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "DashCard":
+        """Create a DashCard instance from an API response dictionary.
+
+        Args:
+            data: Dictionary from Metabase API response.
+
+        Returns:
+            DashCard instance with populated fields.
+        """
+        return cls(
+            id=data.get("id", 0),
+            card_id=data.get("card_id"),
+            row=data.get("row", 0),
+            col=data.get("col", 0),
+            size_x=data.get("size_x", 4),
+            size_y=data.get("size_y", 4),
+            parameter_mappings=data.get("parameter_mappings", []),
+            visualization_settings=data.get("visualization_settings", {}),
+            extra={
+                k: v
+                for k, v in data.items()
+                if k
+                not in {
+                    "id",
+                    "card_id",
+                    "row",
+                    "col",
+                    "size_x",
+                    "size_y",
+                    "parameter_mappings",
+                    "visualization_settings",
+                }
+            },
+        )
 
 
 @dataclass
@@ -45,3 +82,63 @@ class Dashboard:
     # Raw API response for export
     raw_data: dict[str, Any] = field(default_factory=dict)
     extra: dict = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Dashboard":
+        """Create a Dashboard instance from an API response dictionary.
+
+        Args:
+            data: Dictionary from Metabase API response.
+
+        Returns:
+            Dashboard instance with populated fields.
+        """
+        # Parse dashcards
+        dashcards = []
+        ordered_cards = data.get("ordered_cards") or data.get("dashcards") or []
+        for dc in ordered_cards:
+            dashcards.append(DashCard.from_dict(dc))
+
+        # Parse dates
+        created_at = None
+        if data.get("created_at"):
+            with contextlib.suppress(ValueError, AttributeError):
+                created_at = datetime.fromisoformat(data["created_at"].replace("Z", "+00:00"))
+
+        updated_at = None
+        if data.get("updated_at"):
+            with contextlib.suppress(ValueError, AttributeError):
+                updated_at = datetime.fromisoformat(data["updated_at"].replace("Z", "+00:00"))
+
+        # Get collection info
+        collection = data.get("collection") or {}
+        collection_name = collection.get("name") if isinstance(collection, dict) else None
+
+        return cls(
+            id=data.get("id", 0),
+            name=data.get("name", ""),
+            description=data.get("description"),
+            collection_id=data.get("collection_id"),
+            archived=data.get("archived", False),
+            parameters=data.get("parameters", []),
+            dashcards=dashcards,
+            tabs=data.get("tabs", []),
+            created_at=created_at,
+            updated_at=updated_at,
+            collection_name=collection_name,
+            raw_data=data,
+        )
+
+    def get_unique_card_ids(self) -> list[int]:
+        """Get unique card IDs referenced by dashcards.
+
+        Filters out dashcards without a card_id (text cards, heading cards, etc.)
+
+        Returns:
+            List of unique card IDs.
+        """
+        card_ids = set()
+        for dashcard in self.dashcards:
+            if dashcard.card_id is not None:
+                card_ids.add(dashcard.card_id)
+        return sorted(card_ids)
