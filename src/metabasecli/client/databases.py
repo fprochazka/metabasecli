@@ -1,5 +1,7 @@
 """Database-related API calls."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -9,7 +11,7 @@ if TYPE_CHECKING:
 class DatabasesClient:
     """Client for database-related API calls."""
 
-    def __init__(self, client: "BaseClient"):
+    def __init__(self, client: BaseClient):
         self._client = client
 
     def list(self, include_tables: bool = False) -> list[dict[str, Any]]:

@@ -1,5 +1,7 @@
 """Card-related API calls."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -9,7 +11,7 @@ if TYPE_CHECKING:
 class CardsClient:
     """Client for card (saved question) related API calls."""
 
-    def __init__(self, client: "BaseClient"):
+    def __init__(self, client: BaseClient):
         self._client = client
 
     def list(

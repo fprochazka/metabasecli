@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
     from .databases import DatabasesClient
 
 from ..models.auth import AuthConfig, AuthMethod
+
+logger = logging.getLogger(__name__)
 
 
 class MetabaseAPIError(Exception):
@@ -42,12 +45,19 @@ class NotFoundError(MetabaseAPIError):
     pass
 
 
+class SessionExpiredError(AuthenticationError):
+    """Raised when the session has expired."""
+
+    pass
+
+
 class BaseClient:
     """Base HTTP client with session management."""
 
     def __init__(self, config: AuthConfig):
         self.config = config
         self._client: httpx.Client | None = None
+        self._refreshing_session: bool = False
 
     @property
     def base_url(self) -> str:
@@ -81,6 +91,69 @@ class BaseClient:
             )
         return self._client
 
+    def _reset_client(self) -> None:
+        """Reset the HTTP client to pick up new auth headers."""
+        if self._client is not None:
+            self._client.close()
+            self._client = None
+
+    def _refresh_session(self) -> bool:
+        """Attempt to refresh the session using stored credentials.
+
+        Returns:
+            True if refresh was successful, False otherwise.
+        """
+        if self._refreshing_session:
+            return False
+
+        if self.config.auth_method != AuthMethod.CREDENTIALS:
+            return False
+
+        if not self.config.username or not self.config.password:
+            return False
+
+        self._refreshing_session = True
+        try:
+            logger.debug("Attempting to refresh session with stored credentials")
+
+            # Login with credentials to get a new session
+            response = httpx.post(
+                f"{self.base_url}/session",
+                json={
+                    "username": self.config.username,
+                    "password": self.config.password,
+                },
+                headers={"Content-Type": "application/json"},
+                timeout=30.0,
+            )
+
+            if response.status_code != 200:
+                logger.warning("Failed to refresh session: %s", response.status_code)
+                return False
+
+            data = response.json()
+            new_session_id = data.get("id")
+            if not new_session_id:
+                logger.warning("No session ID in refresh response")
+                return False
+
+            # Update config and persist
+            self.config.session_id = new_session_id
+            self._reset_client()
+
+            # Save the new session to config file
+            from ..config import update_session_id
+
+            update_session_id(new_session_id, self.config.profile)
+
+            logger.debug("Session refreshed successfully")
+            return True
+        except Exception as e:
+            logger.warning("Failed to refresh session: %s", e)
+            return False
+        finally:
+            self._refreshing_session = False
+
     def _handle_response(self, response: httpx.Response) -> Any:
         """Handle API response, raising appropriate errors."""
         if response.status_code == 401:
@@ -111,29 +184,68 @@ class BaseClient:
 
         return response.json()
 
+    def _request(
+        self,
+        method: str,
+        path: str,
+        params: dict | None = None,
+        json: dict | None = None,
+    ) -> Any:
+        """Make an HTTP request with automatic session refresh on 401.
+
+        Args:
+            method: HTTP method (GET, POST, PUT, DELETE).
+            path: API path.
+            params: Query parameters (for GET requests).
+            json: JSON body (for POST/PUT requests).
+
+        Returns:
+            Parsed JSON response.
+        """
+        client = self._get_client()
+
+        # Make the request
+        if method == "GET":
+            response = client.get(path, params=params)
+        elif method == "POST":
+            response = client.post(path, json=json)
+        elif method == "PUT":
+            response = client.put(path, json=json)
+        elif method == "DELETE":
+            response = client.delete(path)
+        else:
+            raise ValueError(f"Unknown HTTP method: {method}")
+
+        # Check for auth failure and try to refresh
+        if response.status_code == 401 and self._refresh_session():
+            # Retry the request with the new session
+            client = self._get_client()
+            if method == "GET":
+                response = client.get(path, params=params)
+            elif method == "POST":
+                response = client.post(path, json=json)
+            elif method == "PUT":
+                response = client.put(path, json=json)
+            elif method == "DELETE":
+                response = client.delete(path)
+
+        return self._handle_response(response)
+
     def get(self, path: str, params: dict | None = None) -> Any:
         """Make a GET request."""
-        client = self._get_client()
-        response = client.get(path, params=params)
-        return self._handle_response(response)
+        return self._request("GET", path, params=params)
 
     def post(self, path: str, json: dict | None = None) -> Any:
         """Make a POST request."""
-        client = self._get_client()
-        response = client.post(path, json=json)
-        return self._handle_response(response)
+        return self._request("POST", path, json=json)
 
     def put(self, path: str, json: dict | None = None) -> Any:
         """Make a PUT request."""
-        client = self._get_client()
-        response = client.put(path, json=json)
-        return self._handle_response(response)
+        return self._request("PUT", path, json=json)
 
     def delete(self, path: str) -> Any:
         """Make a DELETE request."""
-        client = self._get_client()
-        response = client.delete(path)
-        return self._handle_response(response)
+        return self._request("DELETE", path)
 
     def close(self) -> None:
         """Close the HTTP client."""
