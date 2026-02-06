@@ -169,10 +169,19 @@ class BaseClient:
         finally:
             self._refreshing_session = False
 
+    def _safe_json(self, response: httpx.Response) -> dict | None:
+        """Safely parse JSON from response, returning None if not JSON."""
+        if not response.content:
+            return None
+        try:
+            return response.json()
+        except (ValueError, UnicodeDecodeError):
+            return None
+
     def _handle_response(self, response: httpx.Response) -> Any:
         """Handle API response, raising appropriate errors."""
         if response.status_code == 401:
-            response_data = response.json() if response.content else None
+            response_data = self._safe_json(response)
             # Session-based auth (SESSION_ID or CREDENTIALS) means the session expired;
             # API_KEY auth means the key itself is invalid.
             if self.config.auth_method in (
@@ -195,18 +204,18 @@ class BaseClient:
             raise PermissionDeniedError(
                 "Permission denied",
                 status_code=403,
-                response=response.json() if response.content else None,
+                response=self._safe_json(response),
             )
 
         if response.status_code == 404:
             raise NotFoundError(
                 "Resource not found",
                 status_code=404,
-                response=response.json() if response.content else None,
+                response=self._safe_json(response),
             )
 
         if response.status_code >= 400:
-            error_data = response.json() if response.content else {}
+            error_data = self._safe_json(response) or {}
             message = error_data.get("message", f"API error: {response.status_code}")
             raise MetabaseAPIError(
                 message,

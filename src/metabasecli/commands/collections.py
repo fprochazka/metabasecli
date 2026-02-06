@@ -12,7 +12,7 @@ from rich.tree import Tree
 
 from ..context import get_context
 from ..logging import console, error_console
-from ..output import handle_api_error, output_json
+from ..output import handle_api_error, output_error_json, output_json
 
 app = typer.Typer(name="collections", help="Collection operations.")
 
@@ -384,7 +384,10 @@ def get_collection(
 
     except ValueError:
         if json_output:
-            output_json({"error": "Invalid collection ID. Must be an integer or 'root'."})
+            output_error_json(
+                code="VALIDATION_ERROR",
+                message="Invalid collection ID. Must be an integer or 'root'.",
+            )
         else:
             error_console.print("[red]Invalid collection ID. Must be an integer or 'root'.[/red]")
         raise typer.Exit(1) from None
@@ -472,7 +475,10 @@ def list_items(
 
     except ValueError:
         if json_output:
-            output_json({"error": "Invalid collection ID. Must be an integer or 'root'."})
+            output_error_json(
+                code="VALIDATION_ERROR",
+                message="Invalid collection ID. Must be an integer or 'root'.",
+            )
         else:
             error_console.print("[red]Invalid collection ID. Must be an integer or 'root'.[/red]")
         raise typer.Exit(1) from None

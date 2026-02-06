@@ -23,7 +23,7 @@ __all__ = [
 EXPORT_VERSION = "1.0"
 
 # HTTP client configuration
-HTTP_TIMEOUT_SECONDS = 30.0
+HTTP_TIMEOUT_SECONDS = 60.0
 
 # Search result model types (as returned by Metabase API)
 MODEL_CARD = "card"
