@@ -61,6 +61,10 @@ def load_config(profile: str = "default") -> AuthConfig | None:
     # Override with environment variables
     config = _apply_env_overrides(file_config)
 
+    # Set the profile name so session refresh saves to the correct profile
+    if config is not None:
+        config.profile = profile
+
     return config
 
 

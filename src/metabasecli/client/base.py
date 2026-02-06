@@ -219,6 +219,38 @@ class BaseClient:
 
         return response.json()
 
+    def _dispatch(
+        self,
+        client: httpx.Client,
+        method: str,
+        path: str,
+        params: dict | None = None,
+        json: dict | None = None,
+    ) -> httpx.Response:
+        """Dispatch an HTTP request to the appropriate client method.
+
+        Args:
+            client: The HTTP client to use.
+            method: HTTP method (GET, POST, PUT, DELETE).
+            path: API path.
+            params: Query parameters (for GET requests).
+            json: JSON body (for POST/PUT requests).
+
+        Returns:
+            The raw HTTP response.
+        """
+        self.request_count += 1
+        if method == "GET":
+            return client.get(path, params=params)
+        elif method == "POST":
+            return client.post(path, json=json)
+        elif method == "PUT":
+            return client.put(path, json=json)
+        elif method == "DELETE":
+            return client.delete(path)
+        else:
+            raise ValueError(f"Unknown HTTP method: {method}")
+
     def _request(
         self,
         method: str,
@@ -237,34 +269,12 @@ class BaseClient:
         Returns:
             Parsed JSON response.
         """
-        client = self._get_client()
-
-        # Make the request
-        self.request_count += 1
-        if method == "GET":
-            response = client.get(path, params=params)
-        elif method == "POST":
-            response = client.post(path, json=json)
-        elif method == "PUT":
-            response = client.put(path, json=json)
-        elif method == "DELETE":
-            response = client.delete(path)
-        else:
-            raise ValueError(f"Unknown HTTP method: {method}")
+        response = self._dispatch(self._get_client(), method, path, params, json)
 
         # Check for auth failure and try to refresh
         if response.status_code == 401 and self._refresh_session():
             # Retry the request with the new session
-            self.request_count += 1
-            client = self._get_client()
-            if method == "GET":
-                response = client.get(path, params=params)
-            elif method == "POST":
-                response = client.post(path, json=json)
-            elif method == "PUT":
-                response = client.put(path, json=json)
-            elif method == "DELETE":
-                response = client.delete(path)
+            response = self._dispatch(self._get_client(), method, path, params, json)
 
         return self._handle_response(response)
 

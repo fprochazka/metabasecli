@@ -118,15 +118,25 @@ def _build_visible_ids(
     return visible
 
 
-def _build_path(
+def _build_path_by_key(
     tree: list[dict[str, Any]],
     target_id: int | str,
-) -> list[str]:
-    """Build the path from root to a node as a list of names."""
+    key: str,
+) -> list[Any]:
+    """Build the path from root to a node as a list of values for the given key.
 
-    def _walk(nodes: list[dict[str, Any]], path: list[str]) -> list[str] | None:
+    Args:
+        tree: The collection tree from the API.
+        target_id: The ID of the target node to find.
+        key: The dict key to extract from each node (e.g. "name" or "id").
+
+    Returns:
+        List of values along the path from root to the target node.
+    """
+
+    def _walk(nodes: list[dict[str, Any]], path: list[Any]) -> list[Any] | None:
         for node in nodes:
-            current_path = [*path, node.get("name", "")]
+            current_path = [*path, node.get(key, "")]
             if node.get("id") == target_id:
                 return current_path
             children = node.get("children", [])
@@ -139,26 +149,20 @@ def _build_path(
     return _walk(tree, []) or []
 
 
+def _build_path(
+    tree: list[dict[str, Any]],
+    target_id: int | str,
+) -> list[str]:
+    """Build the path from root to a node as a list of names."""
+    return _build_path_by_key(tree, target_id, "name")
+
+
 def _build_path_ids(
     tree: list[dict[str, Any]],
     target_id: int | str,
 ) -> list[int | str]:
     """Build the path from root to a node as a list of IDs."""
-
-    def _walk(nodes: list[dict[str, Any]], path: list[int | str]) -> list[int | str] | None:
-        for node in nodes:
-            node_id = node.get("id")
-            current_path = [*path, node_id]
-            if node_id == target_id:
-                return current_path
-            children = node.get("children", [])
-            if children:
-                result = _walk(children, current_path)
-                if result is not None:
-                    return result
-        return None
-
-    return _walk(tree, []) or []
+    return _build_path_by_key(tree, target_id, "id")
 
 
 def _render_tree_human(

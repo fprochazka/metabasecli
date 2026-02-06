@@ -16,6 +16,26 @@ from ..logging import console
 from ..output import get_collection_path, handle_api_error, output_json
 
 
+def _print_model_group(model_type: str, items: list) -> None:
+    """Print a table of search results for a single model type."""
+    console.print(f"[bold cyan]{model_type.upper()}S ({len(items)})[/bold cyan]")
+
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("ID", style="cyan", justify="right", width=8)
+    table.add_column("Name", style="green", min_width=20)
+    table.add_column("Location", style="dim", min_width=30)
+
+    for item in items:
+        table.add_row(
+            str(item.get("id", "")),
+            item.get("name", ""),
+            get_collection_path(item),
+        )
+
+    console.print(table)
+    console.print()
+
+
 def search_command(
     query: Annotated[str, typer.Argument(help="Search term.")],
     models: Annotated[
@@ -137,45 +157,12 @@ def search_command(
             for model_type in SEARCHABLE_MODELS:
                 if model_type not in grouped:
                     continue
-
-                items = grouped[model_type]
-                console.print(f"[bold cyan]{model_type.upper()}S ({len(items)})[/bold cyan]")
-
-                table = Table(show_header=True, header_style="bold")
-                table.add_column("ID", style="cyan", justify="right", width=8)
-                table.add_column("Name", style="green", min_width=20)
-                table.add_column("Location", style="dim", min_width=30)
-
-                for item in items:
-                    item_id = str(item.get("id", ""))
-                    name = item.get("name", "")
-                    location = get_collection_path(item)
-
-                    table.add_row(item_id, name, location)
-
-                console.print(table)
-                console.print()
+                _print_model_group(model_type, grouped[model_type])
 
             # Print any remaining types not in the predefined order
             remaining = set(grouped.keys()) - set(SEARCHABLE_MODELS)
             for model_type in sorted(remaining):
-                items = grouped[model_type]
-                console.print(f"[bold cyan]{model_type.upper()}S ({len(items)})[/bold cyan]")
-
-                table = Table(show_header=True, header_style="bold")
-                table.add_column("ID", style="cyan", justify="right", width=8)
-                table.add_column("Name", style="green", min_width=20)
-                table.add_column("Location", style="dim", min_width=30)
-
-                for item in items:
-                    item_id = str(item.get("id", ""))
-                    name = item.get("name", "")
-                    location = get_collection_path(item)
-
-                    table.add_row(item_id, name, location)
-
-                console.print(table)
-                console.print()
+                _print_model_group(model_type, grouped[model_type])
 
     except Exception as e:
         handle_api_error(e, json_output)
