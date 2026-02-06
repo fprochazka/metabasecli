@@ -2,331 +2,413 @@
 
 A command-line interface for Metabase, designed for both humans and AI agents.
 
-## Features
+## Quick Start
 
-- **Database exploration** - List databases, schemas, tables, and fields
-- **Collection management** - Browse and search collections with tree visualization
-- **Card/Question operations** - List, run, create, update, and export saved questions
-- **Dashboard management** - Export dashboards with all referenced cards, import, and manage revisions
-- **Search** - Search across all Metabase entities
-- **URL resolution** - Parse Metabase URLs to understand what entity they reference
+```bash
+# Install
+uv tool install -e .
+
+# Login
+metabase auth login
+
+# Explore
+metabase databases list
+metabase collections tree --search "Sales"
+metabase search "revenue report"
+
+# Export a dashboard with all its cards
+metabase dashboards export 123
+```
+
+## Terminology
+
+Metabase uses different terms in different contexts:
+
+| CLI Command | Metabase UI | API | Description |
+|-------------|-------------|-----|-------------|
+| `cards` | Questions | `/api/card` | Saved queries with visualization settings |
+| `dashboards` | Dashboards | `/api/dashboard` | Collections of cards arranged in a layout |
+| `collections` | Collections | `/api/collection` | Folders that organize cards and dashboards |
+| `databases` | Databases | `/api/database` | Data source connections |
+
+**Aliases:** `metabase queries` and `metabase questions` are aliases for `metabase cards`.
 
 ## Installation
 
-First clone the repository, then:
-
 ```bash
-# Install globally with uv (editable mode)
+# Clone and install globally with uv (editable mode)
+git clone <repo>
+cd metabasecli
 uv tool install -e .
 ```
 
-Editable mode means updates are automatic after `git pull` - no reinstall needed.
+Editable mode means changes are automatic after `git pull` - no reinstall needed.
 
-## Configuration
+## Authentication
 
 ### Interactive Login
 
 ```bash
-# Login interactively (prompts for auth method)
 metabase auth login
 ```
 
-Supports three authentication methods:
-- **API Key** - Recommended for automation (requires Metabase 0.49+)
-- **Session ID** - Use an existing session token
-- **Credentials** - Username/password (session auto-refreshes when expired)
+Prompts to choose an authentication method:
 
-Configuration is stored at `~/.config/metabasecli/config.toml`.
+| Method | Best For | Notes |
+|--------|----------|-------|
+| **API Key** | Automation, CI/CD | Requires Metabase 0.49+, admin must enable |
+| **Credentials** | Interactive use | Session auto-refreshes when expired |
+| **Session ID** | Debugging | Manual token, no auto-refresh |
 
 ### Environment Variables
 
+Environment variables override config file settings:
+
 | Variable | Description |
 |----------|-------------|
-| `METABASE_URL` | Metabase instance URL |
-| `METABASE_API_KEY` | API key for authentication |
-| `METABASE_SESSION_ID` | Session token |
-| `METABASE_USERNAME` | Username for credential auth |
+| `METABASE_URL` | Metabase instance URL (e.g., `https://metabase.example.com`) |
+| `METABASE_API_KEY` | API key (starts with `mb_`) |
+| `METABASE_SESSION_ID` | Session token (UUID) |
+| `METABASE_USERNAME` | Email for credential auth |
 | `METABASE_PASSWORD` | Password for credential auth |
 
 ### Multiple Profiles
 
 ```bash
-# Login to a specific profile
+# Login to different instances
 metabase auth login --profile production
+metabase auth login --profile staging
 
 # Use a specific profile
-metabase --profile production databases list
+metabase --profile staging databases list
 ```
 
-## Usage
+Config stored at `~/.config/metabasecli/config.toml`.
+
+### Check Auth Status
+
+```bash
+metabase auth status        # Shows current user and auth method
+metabase auth token         # Prints current token (for debugging)
+metabase auth logout        # Clear stored credentials
+```
+
+## Commands
 
 ### Global Options
 
 ```bash
-metabase --profile=prod <command>  # Use specific profile
-metabase --verbose <command>       # Enable debug logging
-metabase --help                    # Show help
-```
-
-### Authentication
-
-```bash
-# Login interactively
-metabase auth login
-
-# Check authentication status
-metabase auth status
-
-# Show current token (for debugging)
-metabase auth token
-
-# Logout
-metabase auth logout
+metabase --profile <name> <command>   # Use specific profile
+metabase --verbose <command>          # Debug logging to stderr
+metabase --json <command>             # JSON output (most commands)
+metabase --help                       # Show help
+metabase --version                    # Show version
 ```
 
 ### Databases
 
 ```bash
-# List all databases
-metabase databases list
-
-# Get database details
-metabase databases get 1
-
-# Get full metadata (schemas, tables, fields)
-metabase databases metadata 1
-
-# List schemas
-metabase databases schemas 1
-
-# JSON output
-metabase databases list --json
+metabase databases list                    # List all databases
+metabase databases get <id>                # Get database details
+metabase databases metadata <id>           # Full metadata: schemas, tables, fields
+metabase databases schemas <id>            # List schema names
 ```
 
 ### Collections
 
 ```bash
-# Show collection tree from root
-metabase collections tree
+# Tree view with search
+metabase collections tree                          # From root
+metabase collections tree --search "Sales"         # Filter by name
+metabase collections tree --search "Q4" --levels 2 # Show 2 levels of children
 
-# Search collections by name
-metabase collections tree --search "Sales"
-
-# Control depth of children shown
-metabase collections tree --search "Reports" --levels 2
-
-# Get collection details
-metabase collections get 123
-
-# List items in a collection
-metabase collections items 123
-metabase collections items 123 --models card,dashboard
-
-# JSON output
-metabase collections tree --json
+# Collection details
+metabase collections get <id>                      # Get collection info
+metabase collections items <id>                    # List items in collection
+metabase collections items <id> --models card,dashboard  # Filter by type
 ```
 
-### Cards (Questions)
+The tree command always shows the path from matched collections up to root, plus N levels of children (default: 1).
+
+### Cards (Questions/Queries)
 
 ```bash
-# List all cards
-metabase cards list
+# List and get
+metabase cards list                        # List all cards
+metabase cards list --collection-id 123    # Filter by collection
+metabase cards get <id>                    # Get card definition
 
-# Filter by collection
-metabase cards list --collection-id 123
+# Run query and export results
+metabase cards run <id>
+# Creates /tmp/metabase-<timestamp>/
+#   card-<id>-data.json   (query results as JSON)
+#   card-<id>-data.csv    (query results as CSV)
 
-# Get card details
-metabase cards get 456
+# Create or update
+metabase cards import --file card.json              # Create new card
+metabase cards import --file card.json --id 456     # Update existing
+cat card.json | metabase cards import --file -      # From stdin
 
-# Run a card and export results (JSON + CSV)
-metabase cards run 456
-# Outputs to /tmp/metabase-<timestamp>/card-456-data.json and .csv
-
-# Import a card from JSON file
-metabase cards import --file card-definition.json
-
-# Update an existing card
-metabase cards import --file card-definition.json --id 456
-
-# Archive a card
-metabase cards archive 456
-
-# Delete a card
-metabase cards delete 456 --force
+# Delete
+metabase cards archive <id>                # Soft delete (recoverable)
+metabase cards delete <id> --force         # Permanent delete
 ```
 
 ### Dashboards
 
 ```bash
-# List all dashboards
-metabase dashboards list
+# List and get
+metabase dashboards list                   # List all dashboards
+metabase dashboards list --collection-id 123
+metabase dashboards get <id>               # Get dashboard with cards
 
-# Get dashboard details
-metabase dashboards get 789
+# Export (dashboard + all referenced cards)
+metabase dashboards export <id>
+# Creates /tmp/metabase-<timestamp>/
+#   manifest.json         (export metadata)
+#   dashboard-<id>.json   (dashboard definition)
+#   card-<id>.json        (one per referenced card)
 
-# Export dashboard with all referenced cards
-metabase dashboards export 789
-# Creates /tmp/metabase-<timestamp>/ with:
-#   - manifest.json
-#   - dashboard-789.json
-#   - card-*.json (one per referenced card)
+# Create or update
+metabase dashboards import --file dashboard.json           # Create new
+metabase dashboards import --file dashboard.json --id 789  # Update existing
 
-# Import a dashboard
-metabase dashboards import --file dashboard-definition.json
+# Revisions
+metabase dashboards revisions <id>             # List revision history
+metabase dashboards revert <id> <revision-id>  # Revert to revision
 
-# Update an existing dashboard
-metabase dashboards import --file dashboard-definition.json --id 789
-
-# View revision history
-metabase dashboards revisions 789
-
-# Revert to a previous revision
-metabase dashboards revert 789 12345
-
-# Archive/delete
-metabase dashboards archive 789
-metabase dashboards delete 789 --force
+# Delete
+metabase dashboards archive <id>           # Soft delete
+metabase dashboards delete <id> --force    # Permanent delete
 ```
 
 ### Search
 
 ```bash
-# Search across all entities
-metabase search "revenue"
-
-# Filter by type
-metabase search "sales" --models dashboard,card
-
-# Filter by collection
-metabase search "report" --collection-id 123
-
-# Include archived items
-metabase search "old" --archived
-
-# JSON output
-metabase search "metrics" --json
+metabase search "revenue"                      # Search all entities
+metabase search "sales" --models dashboard,card  # Filter by type
+metabase search "report" --collection-id 123   # Within collection
+metabase search "old" --archived               # Include archived
 ```
+
+Searchable models: `card`, `dashboard`, `collection`, `table`, `database`
 
 ### URL Resolution
 
-```bash
-# Resolve a Metabase URL to understand what it references
-metabase resolve "https://metabase.example.com/question/123"
-metabase resolve "https://metabase.example.com/dashboard/456-sales-dashboard"
-metabase resolve "/collection/789"
+Parse a Metabase URL to get entity information:
 
-# JSON output (default for this command)
-metabase resolve "https://metabase.example.com/question/123" --json
+```bash
+metabase resolve "https://metabase.example.com/question/123"
+metabase resolve "https://metabase.example.com/dashboard/456-sales"
+metabase resolve "/collection/789"
 ```
+
+Useful for AI agents that receive Metabase links and need to understand what they reference.
 
 ## Output Formats
 
-### Text Output (Default)
+### Human-Readable (Default)
 
-Human-readable format with tables and trees:
+Tables, trees, and formatted text for terminal:
 
 ```
 Databases:
   ID  Name              Engine
-  1   Production DB     postgres
-  2   Analytics DW      snowflake
+───────────────────────────────
+   1  Production DB     postgres
+   2  Analytics DW      snowflake
 ```
 
-### JSON Output
+### JSON Output (`--json`)
 
-Machine-readable format for AI agents:
+Structured format for automation and AI agents:
 
 ```json
 {
   "success": true,
-  "data": [...],
+  "data": {
+    "databases": [
+      {"id": 1, "name": "Production DB", "engine": "postgres"},
+      {"id": 2, "name": "Analytics DW", "engine": "snowflake"}
+    ]
+  },
   "meta": {
     "total": 2
   }
 }
 ```
 
-## File Export Convention
+**Error responses:**
 
-All exports are written to timestamped directories:
-
+```json
+{
+  "success": false,
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Card 999 not found"
+  }
+}
 ```
-/tmp/metabase-20250205-143022/
-├── manifest.json
-├── dashboard-123.json
-├── card-456.json
-└── card-789.json
+
+Error codes: `NOT_FOUND`, `AUTHENTICATION_ERROR`, `SESSION_EXPIRED`, `API_ERROR`, `VALIDATION_ERROR`
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Error (see stderr or JSON error) |
+
+## Export File Formats
+
+### manifest.json
+
+```json
+{
+  "export_version": "1.0",
+  "exported_at": "2025-02-05T14:30:22Z",
+  "metabase_url": "https://metabase.example.com",
+  "dashboard_id": 123,
+  "files": {
+    "dashboard": "dashboard-123.json",
+    "cards": ["card-456.json", "card-789.json"]
+  }
+}
 ```
 
-## Developing
+### Card JSON
 
-### Setup
+Complete card definition including:
+- `name`, `description`, `collection_id`
+- `dataset_query` - The query (MBQL or native SQL)
+- `display` - Visualization type (`table`, `bar`, `line`, `pie`, etc.)
+- `visualization_settings` - Chart configuration
+
+### Dashboard JSON
+
+Complete dashboard definition including:
+- `name`, `description`, `collection_id`
+- `dashcards` - Cards with position (`row`, `col`, `size_x`, `size_y`)
+- `parameters` - Dashboard filters
+- `tabs` - Dashboard tabs (if any)
+
+## Common Workflows
+
+### AI Agent: Understand a Metabase Link
 
 ```bash
-# Clone and install dependencies
+# User shares a Metabase URL, agent needs to understand it
+metabase resolve "https://metabase.example.com/dashboard/123" --json
+
+# Then explore its contents
+metabase dashboards get 123 --json
+```
+
+### AI Agent: Find and Modify a Dashboard
+
+```bash
+# Search for the dashboard
+metabase search "quarterly sales" --models dashboard --json
+
+# Export it for analysis
+metabase dashboards export 456
+
+# Read the exported files, make changes, then update
+metabase cards import --file /tmp/metabase-xxx/card-789.json --id 789
+metabase dashboards import --file /tmp/metabase-xxx/dashboard-456.json --id 456
+```
+
+### AI Agent: Create a New Report
+
+```bash
+# Find the target collection
+metabase collections tree --search "Reports" --json
+
+# Find available data sources
+metabase databases list --json
+metabase databases metadata 1 --json
+
+# Create the card (query)
+metabase cards import --file new-card.json
+
+# Create dashboard and add the card
+metabase dashboards import --file new-dashboard.json
+```
+
+### Run a Query and Get Results
+
+```bash
+# Run and export to files
+metabase cards run 123
+
+# Results in /tmp/metabase-<timestamp>/
+#   card-123-data.json - structured data
+#   card-123-data.csv  - for spreadsheets
+```
+
+## Troubleshooting
+
+### "Not authenticated" Error
+
+```bash
+metabase auth status   # Check current auth state
+metabase auth login    # Re-authenticate
+```
+
+### Session Expired
+
+If using credentials auth, sessions auto-refresh. If using session ID auth, you need to manually get a new token.
+
+### API Key Not Working
+
+- Requires Metabase 0.49+
+- Admin must enable API keys in Metabase settings
+- Key must start with `mb_`
+
+### Command Not Found
+
+```bash
+# Reinstall
+uv tool install -e /path/to/metabasecli --force
+```
+
+## Development
+
+```bash
+# Setup
 git clone <repo>
 cd metabasecli
 uv sync
-```
 
-### Running
-
-```bash
-# Run the CLI
+# Run locally
 uv run metabase --help
 
-# Run a command
-uv run metabase databases list
-```
-
-### Linting and Formatting
-
-```bash
-# Format code
+# Lint and format
+uv run ruff check src/ --fix
 uv run ruff format src/
-
-# Lint code
-uv run ruff check src/
-
-# Lint and auto-fix
-uv run ruff check --fix src/
 ```
 
 ### Project Structure
 
 ```
 src/metabasecli/
-├── __init__.py         # Package version
-├── cli.py              # Main CLI entry point
-├── config.py           # Configuration loading/saving
-├── constants.py        # Shared constants
-├── context.py          # CLI context
-├── logging.py          # Logging setup
-├── output.py           # Output formatting and file export
-├── utils.py            # Shared utilities
-├── client/             # API client modules
-│   ├── base.py         # Base client with session management
-│   ├── auth.py         # Authentication API
-│   ├── cards.py        # Cards API
-│   ├── collections.py  # Collections API
-│   ├── dashboards.py   # Dashboards API
-│   ├── databases.py    # Databases API
-│   └── search.py       # Search API
-├── commands/           # CLI command modules
-│   ├── auth.py         # Auth commands
-│   ├── cards.py        # Card commands
-│   ├── collections.py  # Collection commands
-│   ├── dashboards.py   # Dashboard commands
-│   ├── databases.py    # Database commands
-│   ├── resolve.py      # URL resolution
-│   └── search.py       # Search command
-└── models/             # Data models
-    ├── auth.py         # Auth config models
-    ├── card.py         # Card models
-    ├── collection.py   # Collection models
-    ├── dashboard.py    # Dashboard models
-    └── database.py     # Database models
+├── cli.py              # Entry point, command registration
+├── config.py           # Config file loading/saving
+├── context.py          # Global CLI context
+├── output.py           # JSON/file output helpers
+├── client/             # API clients (one per resource)
+│   ├── base.py         # HTTP client, auth, session refresh
+│   └── *.py            # cards, dashboards, collections, etc.
+├── commands/           # CLI commands (one per resource)
+│   └── *.py
+└── models/             # Dataclasses for API responses
+    └── *.py
 ```
+
+## Compatibility
+
+- **Python:** 3.11+
+- **Metabase:** Tested with 0.48+, API keys require 0.49+
 
 ## License
 
