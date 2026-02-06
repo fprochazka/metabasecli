@@ -16,7 +16,7 @@ from rich.table import Table
 from ..client.base import NotFoundError
 from ..constants import EXPORT_VERSION
 from ..context import get_context
-from ..logging import console
+from ..logging import console, error_console
 from ..models.dashboard import Dashboard
 from ..output import (
     create_export_dir,
@@ -42,7 +42,18 @@ def list_dashboards(
         typer.Option("--json", help="Output as JSON."),
     ] = False,
 ) -> None:
-    """List all dashboards."""
+    """List dashboards. Requires --collection-id to avoid slow unfiltered queries."""
+    if collection_id is None:
+        msg = (
+            "--collection-id is required."
+            " Use 'metabase search <query> --models dashboard' to search without a collection filter."
+        )
+        if json_output:
+            output_error_json(code="VALIDATION_ERROR", message=msg)
+        else:
+            error_console.print(f"[red]{msg}[/red]")
+        raise typer.Exit(1)
+
     ctx = get_context()
 
     try:

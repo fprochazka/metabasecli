@@ -87,7 +87,19 @@ def list_cards(
         typer.Option("--json", help="Output as JSON."),
     ] = False,
 ) -> None:
-    """List all cards."""
+    """List cards. Requires at least one filter to avoid slow unfiltered queries."""
+    if not filter_type and collection_id is None and database_id is None:
+        if json_output:
+            output_error_json(
+                code="VALIDATION_ERROR",
+                message="At least one filter is required: --filter, --collection-id, or --database-id.",
+            )
+        else:
+            error_console.print(
+                "[red]At least one filter is required: --filter, --collection-id, or --database-id.[/red]"
+            )
+        raise typer.Exit(1)
+
     ctx = get_context()
 
     try:
