@@ -16,6 +16,7 @@ __all__ = [
     "AuthenticationError",
     "NotFoundError",
     "SessionExpiredError",
+    "PermissionDeniedError",
     "BaseClient",
     "MetabaseClient",
 ]
@@ -58,6 +59,10 @@ class NotFoundError(MetabaseAPIError):
 
 class SessionExpiredError(AuthenticationError):
     """Raised when the session has expired."""
+
+
+class PermissionDeniedError(MetabaseAPIError):
+    """Raised when the user lacks permission to access a resource."""
 
 
 class BaseClient:
@@ -166,9 +171,29 @@ class BaseClient:
     def _handle_response(self, response: httpx.Response) -> Any:
         """Handle API response, raising appropriate errors."""
         if response.status_code == 401:
-            raise AuthenticationError(
-                "Authentication failed",
-                status_code=401,
+            response_data = response.json() if response.content else None
+            # Session-based auth (SESSION_ID or CREDENTIALS) means the session expired;
+            # API_KEY auth means the key itself is invalid.
+            if self.config.auth_method in (
+                AuthMethod.SESSION_ID,
+                AuthMethod.CREDENTIALS,
+            ):
+                raise SessionExpiredError(
+                    "Session expired",
+                    status_code=401,
+                    response=response_data,
+                )
+            else:
+                raise AuthenticationError(
+                    "Authentication failed",
+                    status_code=401,
+                    response=response_data,
+                )
+
+        if response.status_code == 403:
+            raise PermissionDeniedError(
+                "Permission denied",
+                status_code=403,
                 response=response.json() if response.content else None,
             )
 

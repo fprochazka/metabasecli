@@ -9,7 +9,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .client.base import MetabaseAPIError, NotFoundError
+from .client.base import (
+    AuthenticationError,
+    MetabaseAPIError,
+    NotFoundError,
+    PermissionDeniedError,
+    SessionExpiredError,
+)
 from .constants import EXPORT_VERSION
 from .logging import console, error_console
 
@@ -150,7 +156,25 @@ def handle_api_error(e: Exception, json_output: bool, entity_name: str = "Resour
         json_output: Whether to output in JSON format.
         entity_name: Name of the entity type for human-readable messages.
     """
-    if isinstance(e, NotFoundError):
+    if isinstance(e, SessionExpiredError):
+        if json_output:
+            output_error_json(
+                code="SESSION_EXPIRED",
+                message=str(e),
+                details={"status_code": e.status_code} if e.status_code else None,
+            )
+        else:
+            error_console.print(f"[red]Session expired: {e}[/red]")
+    elif isinstance(e, AuthenticationError):
+        if json_output:
+            output_error_json(
+                code="AUTHENTICATION_ERROR",
+                message=str(e),
+                details={"status_code": e.status_code} if e.status_code else None,
+            )
+        else:
+            error_console.print(f"[red]Authentication error: {e}[/red]")
+    elif isinstance(e, NotFoundError):
         if json_output:
             output_error_json(
                 code="NOT_FOUND",
@@ -159,6 +183,15 @@ def handle_api_error(e: Exception, json_output: bool, entity_name: str = "Resour
             )
         else:
             error_console.print(f"[red]{entity_name} not found: {e}[/red]")
+    elif isinstance(e, PermissionDeniedError):
+        if json_output:
+            output_error_json(
+                code="PERMISSION_DENIED",
+                message=str(e),
+                details={"status_code": e.status_code} if e.status_code else None,
+            )
+        else:
+            error_console.print(f"[red]Permission denied: {e}[/red]")
     elif isinstance(e, MetabaseAPIError):
         if json_output:
             output_error_json(
