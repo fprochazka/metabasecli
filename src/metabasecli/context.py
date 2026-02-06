@@ -55,6 +55,16 @@ class Context:
             self._client = MetabaseClient(config)
         return self._client
 
+    @property
+    def api_call_count(self) -> int:
+        """Get the total number of API requests made by the client.
+
+        Returns 0 if no client has been created yet.
+        """
+        if self._client is not None:
+            return self._client.request_count
+        return 0
+
     def require_auth(self) -> "MetabaseClient":
         """Get the client, raising an error if not authenticated.
 

@@ -72,6 +72,7 @@ class BaseClient:
         self.config = config
         self._client: httpx.Client | None = None
         self._refreshing_session: bool = False
+        self.request_count: int = 0
 
     @property
     def base_url(self) -> str:
@@ -239,6 +240,7 @@ class BaseClient:
         client = self._get_client()
 
         # Make the request
+        self.request_count += 1
         if method == "GET":
             response = client.get(path, params=params)
         elif method == "POST":
@@ -253,6 +255,7 @@ class BaseClient:
         # Check for auth failure and try to refresh
         if response.status_code == 401 and self._refresh_session():
             # Retry the request with the new session
+            self.request_count += 1
             client = self._get_client()
             if method == "GET":
                 response = client.get(path, params=params)

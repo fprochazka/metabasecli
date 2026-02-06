@@ -119,13 +119,24 @@ def output_json(data: dict, success: bool = True) -> None:
     """Output data as JSON to stdout.
 
     Wraps data in the standard response envelope.
+    Automatically includes the api_calls count from the context singleton
+    when a client has been used.
     """
+    from .context import get_context
+
+    meta: dict[str, Any] = {
+        "timestamp": datetime.now().isoformat() + "Z",
+    }
+
+    ctx = get_context()
+    api_calls = ctx.api_call_count
+    if api_calls > 0:
+        meta["api_calls"] = api_calls
+
     envelope = {
         "success": success,
         "data": data,
-        "meta": {
-            "timestamp": datetime.now().isoformat() + "Z",
-        },
+        "meta": meta,
     }
     console.print_json(json.dumps(envelope, default=str))
 
