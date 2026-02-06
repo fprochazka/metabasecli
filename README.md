@@ -44,6 +44,10 @@ uv tool install -e .
 
 Editable mode means changes are automatic after `git pull` - no reinstall needed.
 
+## Claude Code
+
+A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skill is available for this project, allowing Claude to use the `metabase` CLI autonomously. See [metabasecli skill](https://github.com/fprochazka/claude-code-plugins/tree/master/plugins/metabasecli) for installation and usage instructions.
+
 ## Authentication
 
 ### Interactive Login
