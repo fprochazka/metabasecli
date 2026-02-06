@@ -69,11 +69,14 @@ def login(
         ),
     ] = None,
     profile: Annotated[
-        str,
+        str | None,
         typer.Option("--profile", help="Profile name for storing credentials."),
-    ] = "default",
+    ] = None,
 ) -> None:
     """Authenticate with Metabase and store credentials."""
+    ctx = get_context()
+    profile = profile if profile is not None else ctx.profile
+
     # Get URL
     if not url:
         url = typer.prompt("Metabase URL")
@@ -183,11 +186,14 @@ def login(
 @app.command("logout")
 def logout(
     profile: Annotated[
-        str,
+        str | None,
         typer.Option("--profile", help="Profile to clear."),
-    ] = "default",
+    ] = None,
 ) -> None:
     """Clear stored session."""
+    ctx = get_context()
+    profile = profile if profile is not None else ctx.profile
+
     # Load current config
     config = load_config(profile)
 
@@ -251,13 +257,13 @@ def status(
         typer.Option("--json", help="Output as JSON."),
     ] = False,
     profile: Annotated[
-        str,
+        str | None,
         typer.Option("--profile", help="Profile to check."),
-    ] = "default",
+    ] = None,
 ) -> None:
     """Show current authentication status."""
     ctx = get_context()
-    ctx.profile = profile
+    profile = profile if profile is not None else ctx.profile
 
     config = load_config(profile)
 
@@ -333,11 +339,14 @@ def status(
 @app.command("token")
 def token(
     profile: Annotated[
-        str,
+        str | None,
         typer.Option("--profile", help="Profile to use."),
-    ] = "default",
+    ] = None,
 ) -> None:
     """Print current session token (for piping)."""
+    ctx = get_context()
+    profile = profile if profile is not None else ctx.profile
+
     config = load_config(profile)
 
     if config is None:

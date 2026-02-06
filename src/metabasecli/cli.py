@@ -50,6 +50,7 @@ def version_callback(value: bool) -> None:
 @app.callback()
 def main(
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose output.", is_eager=True)] = False,
+    profile: Annotated[str, typer.Option("--profile", "-p", help="Profile name to use.")] = "default",
     version: Annotated[
         bool | None,
         typer.Option("--version", "-V", help="Show version and exit.", callback=version_callback, is_eager=True),
@@ -58,6 +59,7 @@ def main(
     """Metabase CLI - interact with Metabase from the command line."""
     setup_logging(verbose=verbose)
     _ctx.verbose = verbose
+    _ctx.profile = profile
 
 
 def cli() -> None:
