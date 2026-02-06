@@ -55,3 +55,4 @@ Thumbs.db
 
 # Documentation
 docs/api/
+.claude/settings.local.json
