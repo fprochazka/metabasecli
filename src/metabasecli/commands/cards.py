@@ -15,6 +15,7 @@ from ..context import get_context
 from ..logging import console, error_console
 from ..output import (
     create_export_dir,
+    get_collection_path_parts,
     handle_api_error,
     output_error_json,
     output_json,
@@ -163,7 +164,32 @@ def get_card(
         card = client.cards.get(card_id)
 
         if json_output:
-            output_json(card)
+            # Build curated output with collection path
+            collection = card.get("collection")
+            collection_data = None
+            if collection and isinstance(collection, dict):
+                _, path_parts = get_collection_path_parts(card)
+                collection_data = {
+                    "id": collection.get("id"),
+                    "name": collection.get("name"),
+                    "path": path_parts,
+                }
+
+            curated: dict[str, Any] = {
+                "id": card.get("id"),
+                "name": card.get("name"),
+                "description": card.get("description"),
+                "collection_id": card.get("collection_id"),
+                "collection": collection_data,
+                "database_id": card.get("database_id"),
+                "dataset_query": card.get("dataset_query"),
+                "display": card.get("display"),
+                "visualization_settings": card.get("visualization_settings"),
+                "parameters": card.get("parameters"),
+                "created_at": card.get("created_at"),
+                "updated_at": card.get("updated_at"),
+            }
+            output_json(curated)
         else:
             # Human-readable output
             console.print(f"[bold]Card:[/bold] {card.get('name', 'Unknown')}")
@@ -262,12 +288,12 @@ def run_card(
         row_count = len(data.get("rows", []))
 
         # Write JSON file
-        json_filename = f"card-{card_id}-data.json"
+        json_filename = f"card-{card_id}-results.json"
         json_path = write_json_file(export_dir, json_filename, result)
 
         # Convert to CSV and write
         headers, rows = _convert_query_result_to_csv(result)
-        csv_filename = f"card-{card_id}-data.csv"
+        csv_filename = f"card-{card_id}-results.csv"
         csv_path = write_csv_file(export_dir, csv_filename, headers, rows)
 
         if json_output:

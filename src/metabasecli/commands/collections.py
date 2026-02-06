@@ -139,6 +139,28 @@ def _build_path(
     return _walk(tree, []) or []
 
 
+def _build_path_ids(
+    tree: list[dict[str, Any]],
+    target_id: int | str,
+) -> list[int | str]:
+    """Build the path from root to a node as a list of IDs."""
+
+    def _walk(nodes: list[dict[str, Any]], path: list[int | str]) -> list[int | str] | None:
+        for node in nodes:
+            node_id = node.get("id")
+            current_path = [*path, node_id]
+            if node_id == target_id:
+                return current_path
+            children = node.get("children", [])
+            if children:
+                result = _walk(children, current_path)
+                if result is not None:
+                    return result
+        return None
+
+    return _walk(tree, []) or []
+
+
 def _render_tree_human(
     tree_data: list[dict[str, Any]],
     match_ids: set[int | str] | None,
@@ -261,10 +283,12 @@ def tree(
                 for m in matches:
                     mid = m.get("id")
                     path = _build_path(tree_data, mid)
+                    path_ids = _build_path_ids(tree_data, mid)
                     match_entry: dict[str, Any] = {
                         "id": mid,
                         "name": m.get("name", ""),
                         "path": path,
+                        "path_ids": path_ids,
                     }
                     # Include children up to `levels` deep
                     children = m.get("children", [])

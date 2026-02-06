@@ -20,6 +20,7 @@ from ..logging import console
 from ..models.dashboard import Dashboard
 from ..output import (
     create_export_dir,
+    get_collection_path_parts,
     handle_api_error,
     output_error_json,
     output_json,
@@ -140,9 +141,11 @@ def get_dashboard(
 
             # Include collection info if available
             if dashboard.collection_name:
+                _, path_parts = get_collection_path_parts(dashboard_data)
                 output_data["collection"] = {
                     "id": dashboard.collection_id,
                     "name": dashboard.collection_name,
+                    "path": path_parts,
                 }
 
             # Include dashcards
