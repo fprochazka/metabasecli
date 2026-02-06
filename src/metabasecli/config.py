@@ -173,19 +173,10 @@ def save_config(config: AuthConfig, profile: str = "default") -> None:
 
 def _write_toml(path: Path, data: dict) -> None:
     """Write data to a TOML file."""
-    lines = []
-    for section, values in data.items():
-        lines.append(f"[{section}]")
-        for key, value in values.items():
-            if isinstance(value, str):
-                lines.append(f'{key} = "{value}"')
-            elif isinstance(value, bool):
-                lines.append(f"{key} = {str(value).lower()}")
-            else:
-                lines.append(f"{key} = {value}")
-        lines.append("")
+    import tomli_w
 
-    path.write_text("\n".join(lines))
+    with open(path, "wb") as f:
+        tomli_w.dump(data, f)
 
 
 def update_session_id(session_id: str, profile: str = "default") -> None:
