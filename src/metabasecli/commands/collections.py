@@ -323,7 +323,7 @@ def tree(
                     mid = m.get("id")
                     path = _build_path(tree_data, mid)
                     path_str = "/" + "/".join(path) if path else "/"
-                    console.print(f"  - {m.get('name', '')} [dim](id: {mid}, path: {path_str})[/dim]")
+                    console.print(f"* {m.get('name', '')} [dim](id: {mid}, path: {path_str})[/dim]")
         else:
             # No search - show full tree from root
             if json_output:

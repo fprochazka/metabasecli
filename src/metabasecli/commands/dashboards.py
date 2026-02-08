@@ -287,7 +287,7 @@ def get_dashboard(
             if include_cards and referenced_cards:
                 console.print("\n[bold]Referenced Cards:[/bold]")
                 for card_id, card_data in referenced_cards.items():
-                    console.print(f"  - {card_data.get('name', 'Unknown')} (ID: {card_id})")
+                    console.print(f"* {card_data.get('name', 'Unknown')} (ID: {card_id})")
 
     except Exception as e:
         handle_api_error(e, json_output, "Dashboard")
@@ -418,9 +418,9 @@ def export_dashboard(
             )
         else:
             console.print(f"Exported to {export_dir}")
-            console.print(f"  * {dashboard_filename} - {dashboard.name}")
+            console.print(f"* {dashboard_filename} - {dashboard.name}")
             for cf in card_files:
-                console.print(f"  * {cf['file']} - {cf['name']}")
+                console.print(f"* {cf['file']} - {cf['name']}")
 
     except Exception as e:
         handle_api_error(e, json_output, "Dashboard")
@@ -663,13 +663,10 @@ def list_revisions(
                 }
             )
         else:
-            console.print(f"[bold]Revisions for Dashboard:[/bold] {dashboard_name} (ID: {dashboard_id})")
-            console.print()
-
             if not revisions:
                 console.print("[dim]No revisions found.[/dim]")
             else:
-                console.print(f"[bold]Revisions ({len(revisions)}):[/bold]")
+                console.print(f"[bold]Revisions for {dashboard_name} ({len(revisions)}):[/bold]")
                 for rev in revisions:
                     rev_id = rev.get("id", "")
                     user = rev.get("user", {})

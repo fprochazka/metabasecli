@@ -321,12 +321,10 @@ def run_card(
                 }
             )
         else:
-            console.print(f"Executing card {card_id}: {card_name}")
-            console.print(f"Rows returned: {row_count}")
-            console.print()
-            console.print("[bold]Output files:[/bold]")
-            console.print(f"  - {json_path}")
-            console.print(f"  - {csv_path}")
+            if ctx.verbose:
+                error_console.print(f"Executing card {card_id}: {card_name}")
+            console.print(f"* {json_path} ({row_count} rows)")
+            console.print(f"* {csv_path}")
 
     except Exception as e:
         handle_api_error(e, json_output, "Card")

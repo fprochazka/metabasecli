@@ -129,7 +129,7 @@ def get_database(
                 for t in tables:
                     table_name = t.get("name", "Unknown")
                     schema = t.get("schema", "")
-                    display = f"  - {schema}.{table_name}" if schema else f"  - {table_name}"
+                    display = f"* {schema}.{table_name}" if schema else f"* {table_name}"
                     console.print(display)
 
                     # Show fields if included
@@ -140,7 +140,7 @@ def get_database(
                             base_type = f.get("base_type", "")
                             semantic_type = f.get("semantic_type", "")
                             type_info = f"{base_type} ({semantic_type})" if semantic_type else base_type
-                            console.print(f"      {field_name}: {type_info}")
+                            console.print(f"  {field_name}: {type_info}")
 
     except Exception as e:
         handle_api_error(e, json_output, "Database")
@@ -245,7 +245,7 @@ def list_schemas(
 
             console.print(f"[bold]Schemas ({len(schemas)}):[/bold]")
             for schema in schemas:
-                console.print(f"  - {schema}")
+                console.print(f"* {schema}")
 
     except Exception as e:
         handle_api_error(e, json_output, "Database")

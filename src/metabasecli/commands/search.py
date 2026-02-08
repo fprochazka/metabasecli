@@ -145,7 +145,7 @@ def search_command(
                 grouped[model_type].append(item)
 
             # Print summary
-            console.print(f"\n[bold]Search results for '[/bold]{query}[bold]'[/bold]")
+            console.print(f"[bold]Search results for '[/bold]{query}[bold]'[/bold]")
             console.print(f"[dim]Found {total} results[/dim]\n")
 
             # Print counts by type

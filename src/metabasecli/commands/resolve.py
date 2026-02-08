@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Annotated, Any
 from urllib.parse import urlparse
 
 import typer
-from rich.table import Table
 
 from ..context import get_context
 from ..logging import console, error_console
@@ -357,65 +356,56 @@ def _print_human_output(url: str, result: dict[str, Any]) -> None:
     entity = result["entity"]
     entity_type = result["entity_type"]
 
-    console.print(f"\n[bold]URL:[/bold] {url}")
-    console.print()
-
-    table = Table(show_header=False, box=None, padding=(0, 2))
-    table.add_column("Field", style="bold cyan")
-    table.add_column("Value")
-
-    table.add_row("Entity Type", entity_type)
-    table.add_row("Entity ID", str(result["entity_id"]))
-    table.add_row("Name", entity.get("name") or "[dim]N/A[/dim]")
+    console.print(f"[bold]URL:[/bold] {url}")
+    console.print(f"[dim]Entity Type:[/dim] {entity_type}")
+    console.print(f"[dim]Entity ID:[/dim] {result['entity_id']}")
+    console.print(f"[dim]Name:[/dim] {entity.get('name') or 'N/A'}")
 
     if entity.get("description"):
-        table.add_row("Description", entity["description"])
+        console.print(f"[dim]Description:[/dim] {entity['description']}")
 
     # Collection path (for cards, dashboards, collections)
     collection_path = result.get("_collection_path_str")
     if collection_path:
-        table.add_row("Collection", collection_path)
+        console.print(f"[dim]Collection:[/dim] {collection_path}")
 
     # Type-specific fields
     if entity_type == "card":
         if entity.get("database_name"):
-            table.add_row("Database", f"{entity['database_name']} (id: {entity.get('database_id')})")
+            console.print(f"[dim]Database:[/dim] {entity['database_name']} (id: {entity.get('database_id')})")
         elif entity.get("database_id"):
-            table.add_row("Database ID", str(entity["database_id"]))
+            console.print(f"[dim]Database ID:[/dim] {entity['database_id']}")
 
         if entity.get("display"):
-            table.add_row("Display", entity["display"])
+            console.print(f"[dim]Display:[/dim] {entity['display']}")
 
         if entity.get("query_type"):
-            table.add_row("Query Type", entity["query_type"])
+            console.print(f"[dim]Query Type:[/dim] {entity['query_type']}")
 
     elif entity_type == "dashboard":
         if entity.get("dashcard_count") is not None:
-            table.add_row("Cards", str(entity["dashcard_count"]))
+            console.print(f"[dim]Cards:[/dim] {entity['dashcard_count']}")
 
         if entity.get("parameters"):
             param_names = [p.get("name", p.get("slug", "?")) for p in entity["parameters"]]
-            table.add_row("Parameters", ", ".join(param_names) if param_names else "[dim]None[/dim]")
+            console.print(f"[dim]Parameters:[/dim] {', '.join(param_names) if param_names else 'None'}")
 
     elif entity_type == "collection":
         if entity.get("parent_id"):
-            table.add_row("Parent ID", str(entity["parent_id"]))
+            console.print(f"[dim]Parent ID:[/dim] {entity['parent_id']}")
 
         if entity.get("archived"):
-            table.add_row("Archived", "Yes")
+            console.print("[dim]Archived:[/dim] Yes")
 
     elif entity_type == "database":
         if entity.get("engine"):
-            table.add_row("Engine", entity["engine"])
+            console.print(f"[dim]Engine:[/dim] {entity['engine']}")
 
         if entity.get("schema"):
-            table.add_row("Schema", entity["schema"])
+            console.print(f"[dim]Schema:[/dim] {entity['schema']}")
 
     # Timestamps
     if entity.get("updated_at"):
-        table.add_row("Last Updated", entity["updated_at"])
+        console.print(f"[dim]Last Updated:[/dim] {entity['updated_at']}")
     elif entity.get("created_at"):
-        table.add_row("Created", entity["created_at"])
-
-    console.print(table)
-    console.print()
+        console.print(f"[dim]Created:[/dim] {entity['created_at']}")
