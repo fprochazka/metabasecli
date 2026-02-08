@@ -460,7 +460,7 @@ def export_dashboard(
 def import_dashboard(
     file: Annotated[
         str | None,
-        typer.Option("--file", help="Path to manifest.json or dashboard JSON file."),
+        typer.Option("--file", help="Path to dashboard JSON file (or use stdin with '-')."),
     ] = None,
     dashboard_id: Annotated[
         int | None,
@@ -470,34 +470,22 @@ def import_dashboard(
         int | None,
         typer.Option("--collection-id", help="Target collection."),
     ] = None,
-    database_id: Annotated[
-        int | None,
-        typer.Option("--database-id", help="Target database for cards."),
-    ] = None,
-    cards_only: Annotated[
-        bool,
-        typer.Option("--cards-only", help="Only import/update cards, skip dashboard."),
-    ] = False,
-    dashboard_only: Annotated[
-        bool,
-        typer.Option("--dashboard-only", help="Only import/update dashboard, assume cards exist."),
-    ] = False,
-    dry_run: Annotated[
-        bool,
-        typer.Option("--dry-run", help="Show what would be imported without making changes."),
-    ] = False,
     json_output: Annotated[
         bool,
         typer.Option("--json", help="Output as JSON."),
     ] = False,
 ) -> None:
-    """Import a dashboard from a JSON definition file."""
+    """Import a dashboard from a JSON definition file.
+
+    Creates or updates a dashboard layout. Cards must already exist — use
+    'metabase cards import' to create them first. Dashcards reference
+    existing cards by card_id.
+    """
     ctx = get_context()
 
     try:
         # Read input from file or stdin
         if file == "-" or file is None:
-            # Read from stdin
             if sys.stdin.isatty():
                 output_error_json(
                     code="VALIDATION_ERROR",
@@ -505,12 +493,9 @@ def import_dashboard(
                 )
                 raise typer.Exit(1)
             input_json = sys.stdin.read()
-            file_path = None
         else:
-            # Read from file
             try:
-                file_path = Path(file)
-                input_json = file_path.read_text()
+                input_json = Path(file).read_text()
             except FileNotFoundError:
                 output_error_json(
                     code="FILE_ERROR",
@@ -534,183 +519,59 @@ def import_dashboard(
             )
             raise typer.Exit(1) from None
 
-        # Determine if this is a manifest or a direct dashboard file
-        is_manifest = "dashboard" in input_data and "cards" in input_data and "export_version" in input_data
-        is_export_file = "export_version" in input_data and "type" in input_data
-
-        dashboard_data: dict[str, Any]
-        card_files_to_import: list[Path] = []
-
-        if is_manifest:
-            # This is a manifest.json file
-            if file_path is None:
-                output_error_json(
-                    code="VALIDATION_ERROR",
-                    message="Manifest import requires a file path (cannot use stdin).",
-                )
-                raise typer.Exit(1) from None
-
-            manifest_dir = file_path.parent
-
-            # Read dashboard file
-            dashboard_file = manifest_dir / input_data["dashboard"]["file"]
-            try:
-                dashboard_export = json.loads(dashboard_file.read_text())
-                dashboard_data = dashboard_export.get("dashboard", dashboard_export)
-            except FileNotFoundError:
-                output_error_json(
-                    code="FILE_ERROR",
-                    message=f"Dashboard file not found: {dashboard_file}",
-                )
-                raise typer.Exit(1) from None
-
-            # Get card file paths
-            for card_entry in input_data.get("cards", []):
-                card_files_to_import.append(manifest_dir / card_entry["file"])
-
-        elif is_export_file and input_data.get("type") == "dashboard":
-            # This is a dashboard export file
+        # Unwrap export envelope if present
+        if "export_version" in input_data and "type" in input_data and input_data.get("type") == "dashboard":
             dashboard_data = input_data.get("dashboard", input_data)
         else:
-            # Assume it's a raw dashboard definition
             dashboard_data = input_data
 
         # Apply overrides
         if collection_id is not None:
             dashboard_data["collection_id"] = collection_id
 
-        # Remove read-only fields that shouldn't be sent on create/update
+        # Remove read-only fields
         for field_name in _DASHBOARD_READONLY_FIELDS:
             dashboard_data.pop(field_name, None)
 
-        # Handle dry run
-        if dry_run:
-            result: dict[str, Any] = {
-                "dry_run": True,
-                "dashboard": {
-                    "name": dashboard_data.get("name"),
-                    "action": "update" if dashboard_id else "create",
-                },
-                "cards": [],
-            }
-            for card_file in card_files_to_import:
-                try:
-                    card_export = json.loads(card_file.read_text())
-                    card_data = card_export.get("card", card_export)
-                    result["cards"].append(
-                        {
-                            "name": card_data.get("name"),
-                            "action": "create",
-                        }
-                    )
-                except (FileNotFoundError, json.JSONDecodeError):
-                    pass
-            output_json(result)
-            return
+        # Prepare dashcards: clean fields, assign negative IDs
+        prepared_dashcards = _prepare_dashcards_for_import(dashboard_data)
+        dashboard_data["dashcards"] = prepared_dashcards
+        dashboard_data.pop("ordered_cards", None)
 
         client = ctx.require_auth()
-        imported_cards: list[dict[str, Any]] = []
-        card_id_mapping: dict[int, int] = {}
 
-        # Import cards first (if not dashboard_only)
-        if not dashboard_only and card_files_to_import:
-            for card_file in card_files_to_import:
-                try:
-                    card_export = json.loads(card_file.read_text())
-                    card_data = card_export.get("card", card_export)
-
-                    # Capture original card ID before stripping for ID mapping
-                    original_card_id = card_data.get("id")
-
-                    # Apply overrides
-                    if collection_id is not None:
-                        card_data["collection_id"] = collection_id
-                    if database_id is not None:
-                        if "dataset_query" in card_data:
-                            card_data["dataset_query"]["database"] = database_id
-                        card_data["database_id"] = database_id
-
-                    # Remove fields that shouldn't be sent
-                    card_fields_to_remove = [
-                        "id",
-                        "creator",
-                        "created_at",
-                        "updated_at",
-                        "made_public_by_id",
-                        "public_uuid",
-                        "entity_id",
-                        "collection",
-                        "creator_id",
-                    ]
-                    for field_name in card_fields_to_remove:
-                        card_data.pop(field_name, None)
-
-                    # Create card
-                    created_card = client.cards.create(card_data)
-                    new_card_id = created_card.get("id")
-
-                    # Track old->new card ID mapping for dashcard references
-                    if original_card_id is not None and new_card_id is not None:
-                        card_id_mapping[original_card_id] = new_card_id
-
-                    imported_cards.append(
-                        {
-                            "id": new_card_id,
-                            "name": created_card.get("name"),
-                            "action": "created",
-                        }
-                    )
-                except (FileNotFoundError, json.JSONDecodeError) as e:
-                    imported_cards.append(
-                        {
-                            "file": str(card_file),
-                            "action": "failed",
-                            "error": str(e),
-                        }
-                    )
-
-        # Import dashboard (if not cards_only)
-        dashboard_result: dict[str, Any] | None = None
-        if not cards_only:
-            # Prepare dashcards: clean fields, assign negative IDs, remap card IDs
-            prepared_dashcards = _prepare_dashcards_for_import(dashboard_data, card_id_mapping or None)
-            dashboard_data["dashcards"] = prepared_dashcards
-            dashboard_data.pop("ordered_cards", None)
-
-            if dashboard_id is not None:
-                # Update existing dashboard
-                result_data = client.dashboards.update(dashboard_id, dashboard_data)
-                dashboard_result = {
-                    "id": result_data.get("id"),
-                    "name": result_data.get("name"),
-                    "action": "updated",
+        if dashboard_id is not None:
+            # Update existing dashboard
+            result_data = client.dashboards.update(dashboard_id, dashboard_data)
+            output_json(
+                {
+                    "dashboard": {
+                        "id": result_data.get("id"),
+                        "name": result_data.get("name"),
+                        "action": "updated",
+                    }
                 }
-            else:
-                # Create new dashboard in two steps:
-                # 1. POST to create the shell (Metabase ignores dashcards on POST)
-                # 2. PUT to attach the dashcards
-                dashcards = dashboard_data.pop("dashcards", [])
-                result_data = client.dashboards.create(dashboard_data)
-                new_dashboard_id = result_data.get("id")
+            )
+        else:
+            # Create new dashboard in two steps:
+            # 1. POST to create the shell (Metabase ignores dashcards on POST)
+            # 2. PUT to attach the dashcards
+            dashcards = dashboard_data.pop("dashcards", [])
+            result_data = client.dashboards.create(dashboard_data)
+            new_dashboard_id = result_data.get("id")
 
-                # Attach dashcards via PUT if we have any
-                if dashcards and new_dashboard_id:
-                    client.dashboards.update(new_dashboard_id, {"dashcards": dashcards})
+            if dashcards and new_dashboard_id:
+                client.dashboards.update(new_dashboard_id, {"dashcards": dashcards})
 
-                dashboard_result = {
-                    "id": new_dashboard_id,
-                    "name": result_data.get("name"),
-                    "action": "created",
+            output_json(
+                {
+                    "dashboard": {
+                        "id": new_dashboard_id,
+                        "name": result_data.get("name"),
+                        "action": "created",
+                    }
                 }
-
-        # Output result (JSON only as per spec)
-        output_result: dict[str, Any] = {}
-        if dashboard_result:
-            output_result["dashboard"] = dashboard_result
-        if imported_cards:
-            output_result["cards"] = imported_cards
-
-        output_json(output_result)
+            )
 
     except typer.Exit:
         raise
