@@ -29,6 +29,78 @@ from ..output import (
 
 app = typer.Typer(name="dashboards", help="Dashboard operations.")
 
+# Fields allowed in each dashcard when sending to PUT /api/dashboard/:id
+_DASHCARD_ALLOWED_FIELDS = {
+    "card_id",
+    "row",
+    "col",
+    "size_x",
+    "size_y",
+    "parameter_mappings",
+    "visualization_settings",
+    "series",
+    "dashboard_tab_id",
+}
+
+# Read-only fields that must be stripped from dashboard data before create/update.
+# Note: ``ordered_cards`` is NOT listed here because it must remain available for
+# ``_prepare_dashcards_for_import`` to read from; it is removed explicitly after
+# dashcards have been prepared.
+_DASHBOARD_READONLY_FIELDS = [
+    "id",
+    "creator_id",
+    "creator",
+    "created_at",
+    "updated_at",
+    "made_public_by_id",
+    "public_uuid",
+    "entity_id",
+    "collection",
+    "embedding_params",
+    "param_fields",
+    "param_values",
+    "last-edit-info",
+    "can_write",
+]
+
+
+def _prepare_dashcards_for_import(
+    dashboard_data: dict[str, Any],
+    card_id_mapping: dict[int, int] | None = None,
+) -> list[dict[str, Any]]:
+    """Prepare dashcards for import by cleaning and assigning negative IDs.
+
+    The Metabase PUT /api/dashboard/:id endpoint requires:
+    - Dashcards under the ``dashcards`` key (not ``ordered_cards``)
+    - Negative IDs for new dashcard placements
+    - Only whitelisted fields per dashcard (no embedded ``card`` object, etc.)
+
+    Args:
+        dashboard_data: Raw dashboard data dict (from GET response or export file).
+            Dashcards are read from either ``ordered_cards`` or ``dashcards`` key.
+        card_id_mapping: Optional mapping from old card IDs to new card IDs.
+            Used when cards were created during import and received new IDs.
+
+    Returns:
+        List of cleaned dashcard dicts ready for the API.
+    """
+    raw_dashcards = dashboard_data.get("ordered_cards") or dashboard_data.get("dashcards") or []
+
+    prepared: list[dict[str, Any]] = []
+    for idx, dc in enumerate(raw_dashcards, start=1):
+        cleaned: dict[str, Any] = {"id": -idx}
+        for key in _DASHCARD_ALLOWED_FIELDS:
+            if key in dc:
+                cleaned[key] = dc[key]
+
+        # Apply card ID mapping if provided
+        if card_id_mapping and cleaned.get("card_id") in card_id_mapping:
+            cleaned["card_id"] = card_id_mapping[cleaned["card_id"]]
+
+        prepared.append(cleaned)
+
+    return prepared
+
 
 @app.command("list")
 def list_dashboards(
@@ -490,20 +562,8 @@ def import_dashboard(
         if collection_id is not None:
             dashboard_data["collection_id"] = collection_id
 
-        # Remove fields that shouldn't be sent on create/update
-        fields_to_remove = [
-            "id",
-            "creator_id",
-            "created_at",
-            "updated_at",
-            "made_public_by_id",
-            "public_uuid",
-            "entity_id",
-            "collection",
-            "creator",
-            "embedding_params",
-        ]
-        for field_name in fields_to_remove:
+        # Remove read-only fields that shouldn't be sent on create/update
+        for field_name in _DASHBOARD_READONLY_FIELDS:
             dashboard_data.pop(field_name, None)
 
         # Handle dry run
@@ -533,6 +593,7 @@ def import_dashboard(
 
         client = ctx.require_auth()
         imported_cards: list[dict[str, Any]] = []
+        card_id_mapping: dict[int, int] = {}
 
         # Import cards first (if not dashboard_only)
         if not dashboard_only and card_files_to_import:
@@ -540,6 +601,9 @@ def import_dashboard(
                 try:
                     card_export = json.loads(card_file.read_text())
                     card_data = card_export.get("card", card_export)
+
+                    # Capture original card ID before stripping for ID mapping
+                    original_card_id = card_data.get("id")
 
                     # Apply overrides
                     if collection_id is not None:
@@ -566,9 +630,15 @@ def import_dashboard(
 
                     # Create card
                     created_card = client.cards.create(card_data)
+                    new_card_id = created_card.get("id")
+
+                    # Track old->new card ID mapping for dashcard references
+                    if original_card_id is not None and new_card_id is not None:
+                        card_id_mapping[original_card_id] = new_card_id
+
                     imported_cards.append(
                         {
-                            "id": created_card.get("id"),
+                            "id": new_card_id,
                             "name": created_card.get("name"),
                             "action": "created",
                         }
@@ -585,6 +655,11 @@ def import_dashboard(
         # Import dashboard (if not cards_only)
         dashboard_result: dict[str, Any] | None = None
         if not cards_only:
+            # Prepare dashcards: clean fields, assign negative IDs, remap card IDs
+            prepared_dashcards = _prepare_dashcards_for_import(dashboard_data, card_id_mapping or None)
+            dashboard_data["dashcards"] = prepared_dashcards
+            dashboard_data.pop("ordered_cards", None)
+
             if dashboard_id is not None:
                 # Update existing dashboard
                 result_data = client.dashboards.update(dashboard_id, dashboard_data)
