@@ -6,14 +6,12 @@ exporting/importing, revisions, and archiving/deleting dashboards.
 
 import json
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any
 
 import typer
 
 from ..client.base import NotFoundError
-from ..constants import EXPORT_VERSION
 from ..context import get_context
 from ..logging import console, error_console
 from ..models.dashboard import Dashboard
@@ -24,7 +22,6 @@ from ..output import (
     output_error_json,
     output_json,
     write_export_file,
-    write_json_file,
 )
 
 app = typer.Typer(name="dashboards", help="Dashboard operations.")
@@ -404,27 +401,10 @@ def export_dashboard(
                 }
             )
 
-        # Write manifest
-        manifest = {
-            "export_version": EXPORT_VERSION,
-            "export_timestamp": datetime.now().isoformat() + "Z",
-            "source": {
-                "instance_url": config.url if config else "",
-            },
-            "dashboard": {
-                "id": dashboard_id,
-                "name": dashboard.name,
-                "file": dashboard_filename,
-            },
-            "cards": card_files,
-        }
-        manifest_path = write_json_file(export_dir, "manifest.json", manifest)
-
         if json_output:
             output_json(
                 {
                     "output_dir": str(export_dir),
-                    "manifest": str(manifest_path),
                     "dashboard": {
                         "id": dashboard_id,
                         "name": dashboard.name,
@@ -446,7 +426,6 @@ def export_dashboard(
             console.print(f"Output directory: {export_dir}")
             console.print()
             console.print("[bold]Files created:[/bold]")
-            console.print("  - manifest.json")
             console.print(f"  - {dashboard_filename}")
             for cf in card_files:
                 console.print(f"  - {cf['file']} ({cf['name']})")
