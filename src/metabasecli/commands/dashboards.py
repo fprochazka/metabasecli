@@ -307,38 +307,34 @@ def export_dashboard(
 
     try:
         client = ctx.require_auth()
+        verbose = ctx.verbose and not json_output
 
-        if not json_output:
-            console.print(f"Exporting dashboard {dashboard_id}...")
-            console.print()
-            console.print("Fetching dashboard details... ", end="")
+        if verbose:
+            error_console.print(f"Fetching dashboard {dashboard_id}...")
 
         # Fetch dashboard
         dashboard_data = client.dashboards.get(dashboard_id)
         dashboard = Dashboard.from_dict(dashboard_data)
 
-        if not json_output:
-            console.print("[green]done[/green]")
-
         # Get unique card IDs
         card_ids = dashboard.get_unique_card_ids()
 
-        if not json_output:
-            console.print(f"Found {len(card_ids)} referenced cards")
+        if verbose:
+            error_console.print(f"Found {len(card_ids)} referenced cards")
 
         # Fetch all referenced cards
         cards: dict[int, dict[str, Any]] = {}
         for card_id in card_ids:
             try:
-                if not json_output:
-                    console.print(f"Exporting card {card_id}... ", end="")
+                if verbose:
+                    error_console.print(f"Fetching card {card_id}...", end=" ")
                 card_data = client.cards.get(card_id)
                 cards[card_id] = card_data
-                if not json_output:
-                    console.print(f"[green]done[/green] ({card_data.get('name', 'Unknown')})")
+                if verbose:
+                    error_console.print(f"done ({card_data.get('name', 'Unknown')})")
             except NotFoundError:
-                if not json_output:
-                    console.print("[yellow]not found (skipped)[/yellow]")
+                if verbose:
+                    error_console.print("not found (skipped)")
 
         # Create export directory
         export_dir = create_export_dir()
@@ -421,14 +417,10 @@ def export_dashboard(
                 }
             )
         else:
-            console.print()
-            console.print("[bold green]Export complete![/bold green]")
-            console.print(f"Output directory: {export_dir}")
-            console.print()
-            console.print("[bold]Files created:[/bold]")
-            console.print(f"  - {dashboard_filename}")
+            console.print(f"Exported to {export_dir}")
+            console.print(f"  * {dashboard_filename} - {dashboard.name}")
             for cf in card_files:
-                console.print(f"  - {cf['file']} ({cf['name']})")
+                console.print(f"  * {cf['file']} - {cf['name']}")
 
     except Exception as e:
         handle_api_error(e, json_output, "Dashboard")
