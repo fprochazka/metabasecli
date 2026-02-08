@@ -353,12 +353,29 @@ def export_dashboard(
             "dashboard_id": dashboard_id,
         }
 
+        # Strip embedded card objects from dashcards before exporting.
+        # Cards are exported as separate files, so the full card definition
+        # inside each dashcard is redundant and confusing for agents editing
+        # the JSON. We keep only the layout/placement fields.
+        dashcards_key = "ordered_cards" if "ordered_cards" in dashboard_data else "dashcards"
+        raw_dashcards = dashboard_data.get(dashcards_key, [])
+        cleaned_dashcards = []
+        for dc in raw_dashcards:
+            cleaned: dict[str, Any] = {"id": dc.get("id")}
+            for key in _DASHCARD_ALLOWED_FIELDS:
+                if key in dc:
+                    cleaned[key] = dc[key]
+            cleaned_dashcards.append(cleaned)
+        export_data = {**dashboard_data}
+        export_data.pop("ordered_cards", None)
+        export_data["dashcards"] = cleaned_dashcards
+
         # Write dashboard file
         dashboard_filename = f"dashboard-{dashboard_id}.json"
         write_export_file(
             export_dir,
             dashboard_filename,
-            dashboard_data,
+            export_data,
             "dashboard",
             source_info,
         )
