@@ -686,10 +686,19 @@ def import_dashboard(
                     "action": "updated",
                 }
             else:
-                # Create new dashboard
+                # Create new dashboard in two steps:
+                # 1. POST to create the shell (Metabase ignores dashcards on POST)
+                # 2. PUT to attach the dashcards
+                dashcards = dashboard_data.pop("dashcards", [])
                 result_data = client.dashboards.create(dashboard_data)
+                new_dashboard_id = result_data.get("id")
+
+                # Attach dashcards via PUT if we have any
+                if dashcards and new_dashboard_id:
+                    client.dashboards.update(new_dashboard_id, {"dashcards": dashcards})
+
                 dashboard_result = {
-                    "id": result_data.get("id"),
+                    "id": new_dashboard_id,
                     "name": result_data.get("name"),
                     "action": "created",
                 }
