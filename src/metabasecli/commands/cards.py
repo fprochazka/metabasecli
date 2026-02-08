@@ -9,7 +9,6 @@ import sys
 from typing import Annotated, Any
 
 import typer
-from rich.table import Table
 
 from ..context import get_context
 from ..logging import console, error_console
@@ -131,29 +130,30 @@ def list_cards(
 
             output_json({"cards": card_list})
         else:
-            # Human-readable table output
-            table = Table(title="Cards")
-            table.add_column("ID", style="cyan", justify="right")
-            table.add_column("Name", style="green")
-            table.add_column("Display", style="blue")
-            table.add_column("Collection", style="magenta")
+            # Human-readable bullet list output
+            if not cards:
+                console.print("[dim]No cards found.[/dim]")
+            else:
+                console.print(f"[bold]Cards ({len(cards)}):[/bold]")
+                for card in cards:
+                    name = card.get("name", "Unknown")
+                    card_id = card.get("id", "")
+                    display = card.get("display", "")
 
-            for card in cards:
-                collection = card.get("collection")
-                collection_name = ""
-                if collection and isinstance(collection, dict):
-                    collection_name = collection.get("name", "")
-                elif card.get("collection_id"):
-                    collection_name = f"(ID: {card.get('collection_id')})"
+                    collection = card.get("collection")
+                    collection_name = ""
+                    if collection and isinstance(collection, dict):
+                        collection_name = collection.get("name", "")
+                    elif card.get("collection_id"):
+                        collection_name = f"(ID: {card.get('collection_id')})"
 
-                table.add_row(
-                    str(card.get("id", "")),
-                    card.get("name", ""),
-                    card.get("display", ""),
-                    collection_name,
-                )
+                    parts = [f"id: {card_id}"]
+                    if display:
+                        parts.append(f"display: {display}")
+                    if collection_name:
+                        parts.append(f"collection: {collection_name}")
 
-            console.print(table)
+                    console.print(f"* {name} ({', '.join(parts)})")
 
     except Exception as e:
         handle_api_error(e, json_output, "Card")

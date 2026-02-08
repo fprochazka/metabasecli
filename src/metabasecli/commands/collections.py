@@ -7,7 +7,6 @@ creating, updating, and archiving collections.
 from typing import Annotated, Any
 
 import typer
-from rich.table import Table
 from rich.tree import Tree
 
 from ..context import get_context
@@ -457,21 +456,16 @@ def list_items(
                 console.print("[dim]No items found.[/dim]")
                 return
 
-            table = Table(title=f"Items in Collection {collection_id}")
-            table.add_column("ID", style="cyan", justify="right")
-            table.add_column("Type", style="blue")
-            table.add_column("Name", style="green")
-            table.add_column("Description", style="dim", max_width=50)
-
+            console.print(f"[bold]Items in Collection {collection_id} ({len(items)}):[/bold]")
             for item in items:
-                table.add_row(
-                    str(item.get("id", "")),
-                    item.get("model", ""),
-                    item.get("name", ""),
-                    (item.get("description") or "")[:50],
-                )
-
-            console.print(table)
+                name = item.get("name", "Unknown")
+                item_id = item.get("id", "")
+                model = item.get("model", "")
+                desc = (item.get("description") or "").strip()
+                line = f"* {name} (id: {item_id}, type: {model})"
+                if desc:
+                    line += f" - {desc[:50]}"
+                console.print(line)
 
     except ValueError:
         if json_output:

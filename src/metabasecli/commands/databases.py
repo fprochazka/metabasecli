@@ -7,7 +7,6 @@ metadata, and schemas.
 from typing import Annotated
 
 import typer
-from rich.table import Table
 from rich.tree import Tree
 
 from ..context import get_context
@@ -54,29 +53,28 @@ def list_databases(
 
             output_json({"databases": db_list})
         else:
-            # Human-readable table output
-            table = Table(title="Databases")
-            table.add_column("ID", style="cyan", justify="right")
-            table.add_column("Name", style="green")
-            table.add_column("Engine", style="blue")
-            if include_tables:
-                table.add_column("Tables", justify="right")
+            # Human-readable bullet list output
+            if not databases:
+                console.print("[dim]No databases found.[/dim]")
+            else:
+                console.print(f"[bold]Databases ({len(databases)}):[/bold]")
+                for db in databases:
+                    name = db.get("name", "Unknown")
+                    db_id = db.get("id", "")
+                    engine = db.get("engine", "")
 
-            for db in databases:
-                row = [
-                    str(db.get("id", "")),
-                    db.get("name", ""),
-                    db.get("engine", ""),
-                ]
-                if include_tables:
-                    tables = db.get("tables", [])
-                    if isinstance(tables, list):
-                        row.append(str(len(tables)))
-                    else:
-                        row.append(str(tables))
-                table.add_row(*row)
+                    parts = [f"id: {db_id}"]
+                    if engine:
+                        parts.append(f"engine: {engine}")
 
-            console.print(table)
+                    if include_tables:
+                        tables = db.get("tables", [])
+                        if isinstance(tables, list):
+                            parts.append(f"tables: {len(tables)}")
+                        else:
+                            parts.append(f"tables: {tables}")
+
+                    console.print(f"* {name} ({', '.join(parts)})")
 
     except Exception as e:
         handle_api_error(e, json_output, "Database")

@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import typer
-from rich.table import Table
 
 from ..client.base import NotFoundError
 from ..constants import EXPORT_VERSION
@@ -79,27 +78,27 @@ def list_dashboards(
 
             output_json({"dashboards": dashboard_list})
         else:
-            # Human-readable table output
-            table = Table(title="Dashboards")
-            table.add_column("ID", style="cyan", justify="right")
-            table.add_column("Name", style="green")
-            table.add_column("Collection", style="magenta")
+            # Human-readable bullet list output
+            if not dashboards:
+                console.print("[dim]No dashboards found.[/dim]")
+            else:
+                console.print(f"[bold]Dashboards ({len(dashboards)}):[/bold]")
+                for dashboard in dashboards:
+                    name = dashboard.get("name", "Unknown")
+                    dash_id = dashboard.get("id", "")
 
-            for dashboard in dashboards:
-                collection = dashboard.get("collection")
-                collection_name = ""
-                if collection and isinstance(collection, dict):
-                    collection_name = collection.get("name", "")
-                elif dashboard.get("collection_id"):
-                    collection_name = f"(ID: {dashboard.get('collection_id')})"
+                    collection = dashboard.get("collection")
+                    collection_name = ""
+                    if collection and isinstance(collection, dict):
+                        collection_name = collection.get("name", "")
+                    elif dashboard.get("collection_id"):
+                        collection_name = f"(ID: {dashboard.get('collection_id')})"
 
-                table.add_row(
-                    str(dashboard.get("id", "")),
-                    dashboard.get("name", ""),
-                    collection_name,
-                )
+                    parts = [f"id: {dash_id}"]
+                    if collection_name:
+                        parts.append(f"collection: {collection_name}")
 
-            console.print(table)
+                    console.print(f"* {name} ({', '.join(parts)})")
 
     except Exception as e:
         handle_api_error(e, json_output, "Dashboard")
@@ -737,26 +736,26 @@ def list_revisions(
             if not revisions:
                 console.print("[dim]No revisions found.[/dim]")
             else:
-                table = Table()
-                table.add_column("Revision ID", style="cyan", justify="right")
-                table.add_column("User", style="green")
-                table.add_column("Description", style="white")
-                table.add_column("Timestamp", style="dim")
-
+                console.print(f"[bold]Revisions ({len(revisions)}):[/bold]")
                 for rev in revisions:
+                    rev_id = rev.get("id", "")
                     user = rev.get("user", {})
                     user_name = ""
                     if isinstance(user, dict):
                         user_name = user.get("common_name") or user.get("email", "")
+                    timestamp = rev.get("timestamp", "")
+                    description = (rev.get("description") or "").strip()
 
-                    table.add_row(
-                        str(rev.get("id", "")),
-                        user_name,
-                        rev.get("description", ""),
-                        rev.get("timestamp", ""),
-                    )
+                    parts = [f"id: {rev_id}"]
+                    if user_name:
+                        parts.append(f"user: {user_name}")
+                    if timestamp:
+                        parts.append(f"at: {timestamp}")
 
-                console.print(table)
+                    line = f"* Revision ({', '.join(parts)})"
+                    if description:
+                        line += f" - {description}"
+                    console.print(line)
 
     except Exception as e:
         handle_api_error(e, json_output, "Dashboard")

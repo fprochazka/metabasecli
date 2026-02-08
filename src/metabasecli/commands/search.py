@@ -8,7 +8,6 @@ from collections import defaultdict
 from typing import Annotated
 
 import typer
-from rich.table import Table
 
 from ..constants import SEARCHABLE_MODELS
 from ..context import get_context
@@ -17,22 +16,24 @@ from ..output import get_collection_path, handle_api_error, output_json
 
 
 def _print_model_group(model_type: str, items: list) -> None:
-    """Print a table of search results for a single model type."""
-    console.print(f"[bold cyan]{model_type.upper()}S ({len(items)})[/bold cyan]")
-
-    table = Table(show_header=True, header_style="bold")
-    table.add_column("ID", style="cyan", justify="right", width=8)
-    table.add_column("Name", style="green", min_width=20)
-    table.add_column("Location", style="dim", min_width=30)
+    """Print a bullet list of search results for a single model type."""
+    console.print(f"[bold cyan]{model_type.upper()}S ({len(items)}):[/bold cyan]")
 
     for item in items:
-        table.add_row(
-            str(item.get("id", "")),
-            item.get("name", ""),
-            get_collection_path(item),
-        )
+        name = item.get("name", "Unknown")
+        item_id = item.get("id", "")
+        location = get_collection_path(item)
+        description = (item.get("description") or "").strip()
 
-    console.print(table)
+        parts = [f"id: {item_id}", f"type: {model_type}"]
+        if location:
+            parts.append(f"location: {location}")
+
+        line = f"* {name} ({', '.join(parts)})"
+        if description:
+            line += f" - {description[:80]}"
+        console.print(line)
+
     console.print()
 
 
