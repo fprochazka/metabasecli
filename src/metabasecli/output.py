@@ -5,6 +5,7 @@ and handling API errors consistently across all commands.
 """
 
 import json
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -33,12 +34,9 @@ __all__ = [
 
 
 def create_export_dir() -> Path:
-    """Create and return a timestamped export directory.
-
-    Creates a directory like /tmp/metabase-20260205-183500/
-    """
+    """Create and return a timestamped export directory in the system temp dir."""
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    dir_path = Path(f"/tmp/metabase-{timestamp}")
+    dir_path = Path(tempfile.gettempdir()) / f"metabase-{timestamp}"
     dir_path.mkdir(parents=True, exist_ok=True)
     return dir_path
 
