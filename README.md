@@ -387,7 +387,12 @@ uv run metabase --help
 # Lint and format
 uv run ruff check src/ --fix
 uv run ruff format src/
+
+# Refresh the version-scoped Metabase API docs under docs/api/ (downloads from GitHub)
+uv run python scripts/fetch_api_docs.py all
 ```
+
+See [docs/metabase-api.md](docs/metabase-api.md) for how the API spec is sourced per Metabase version.
 
 ### Project Structure
 
