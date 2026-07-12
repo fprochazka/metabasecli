@@ -5,6 +5,7 @@ import typer
 
 from . import __version__
 from .commands import (
+    api_command,
     auth_app,
     cards_app,
     collections_app,
@@ -37,6 +38,7 @@ app.add_typer(cards_app, name="questions", hidden=True)
 # Register standalone commands
 app.command("search")(search_command)
 app.command("resolve")(resolve_command)
+app.command("api")(api_command)
 
 _ctx = get_context()
 

@@ -208,6 +208,19 @@ metabase resolve "/collection/789"
 
 Useful for AI agents that receive Metabase links and need to understand what they reference.
 
+### API (raw requests)
+
+An escape hatch for endpoints without a dedicated command. Sends a raw request and prints the server's response verbatim (no `{success, data}` envelope), modeled on `gh api` / `glab api`:
+
+```bash
+metabase api /user/current                             # GET (default method)
+metabase api "/search?q=revenue&models=dashboard"      # query string rides inline
+metabase api /card -X POST --input card.json           # body from a file (defaults to POST)
+cat card.json | metabase api /card --input -           # body from stdin
+```
+
+The endpoint may be written as `/card/1`, `card/1`, or `/api/card/1` (all equivalent). The method defaults to `GET`, or to `POST` when `--input` is given; override it with `-X/--method`. Response bodies are pretty-printed when JSON. On a non-2xx status the body is still printed, an `HTTP <status>` note goes to stderr, and the exit code is 1.
+
 ## Output Formats
 
 ### Human-Readable (Default)

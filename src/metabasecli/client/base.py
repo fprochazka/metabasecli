@@ -234,31 +234,27 @@ class BaseClient:
         method: str,
         path: str,
         params: dict | None = None,
-        json: dict | None = None,
+        json: Any | None = None,
     ) -> httpx.Response:
-        """Dispatch an HTTP request to the appropriate client method.
+        """Dispatch an HTTP request for any method, sending both params and body.
+
+        httpx omits the request body when ``json`` is ``None``, so passing both
+        arguments for every verb is behavior-preserving for the typed callers
+        (GET carried only params, POST/PUT only a body) while also supporting
+        arbitrary method/params/body combinations for the ``api`` passthrough.
 
         Args:
             client: The HTTP client to use.
-            method: HTTP method (GET, POST, PUT, DELETE).
-            path: API path.
-            params: Query parameters (for GET requests).
-            json: JSON body (for POST/PUT requests).
+            method: HTTP method (GET, POST, PUT, PATCH, DELETE).
+            path: API path (may include a query string).
+            params: Query parameters.
+            json: JSON body.
 
         Returns:
             The raw HTTP response.
         """
         self.request_count += 1
-        if method == "GET":
-            return client.get(path, params=params)
-        elif method == "POST":
-            return client.post(path, json=json)
-        elif method == "PUT":
-            return client.put(path, json=json)
-        elif method == "DELETE":
-            return client.delete(path)
-        else:
-            raise ValueError(f"Unknown HTTP method: {method}")
+        return client.request(method, path, params=params, json=json)
 
     def _request(
         self,
@@ -286,6 +282,34 @@ class BaseClient:
             response = self._dispatch(self._get_client(), method, path, params, json)
 
         return self._handle_response(response)
+
+    def request_raw(
+        self,
+        method: str,
+        path: str,
+        json_body: Any | None = None,
+    ) -> httpx.Response:
+        """Make a raw request and return the unmapped ``httpx.Response``.
+
+        Keeps the 401 auto-refresh loop but skips the typed-exception mapping in
+        ``_handle_response``, so callers can render the server's actual status
+        and body verbatim (used by the ``api`` passthrough command). The path
+        may carry an inline query string.
+
+        Args:
+            method: HTTP method (GET, POST, PUT, PATCH, DELETE).
+            path: API path, optionally including a query string.
+            json_body: Parsed JSON request body, or None to send no body.
+
+        Returns:
+            The raw HTTP response, regardless of status code.
+        """
+        response = self._dispatch(self._get_client(), method, path, json=json_body)
+
+        if response.status_code == 401 and self._refresh_session():
+            response = self._dispatch(self._get_client(), method, path, json=json_body)
+
+        return response
 
     def get(self, path: str, params: dict | None = None) -> Any:
         """Make a GET request."""

@@ -3,6 +3,7 @@
 Each module defines a typer app for a command group.
 """
 
+from .api import api_command
 from .auth import app as auth_app
 from .cards import app as cards_app
 from .collections import app as collections_app
@@ -19,4 +20,5 @@ __all__ = [
     "dashboards_app",
     "search_command",
     "resolve_command",
+    "api_command",
 ]
