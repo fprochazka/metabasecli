@@ -112,7 +112,8 @@ class DashboardsClient:
     def list_revisions(self, dashboard_id: int) -> list[dict[str, Any]]:
         """List dashboard revisions.
 
-        Makes a GET request to /api/dashboard/:id/revisions.
+        Makes a GET request to the generic /api/revision endpoint keyed by
+        entity+id; there is no dashboard-specific revisions endpoint.
 
         Args:
             dashboard_id: The ID of the dashboard.
@@ -120,7 +121,10 @@ class DashboardsClient:
         Returns:
             List of revision dictionaries.
         """
-        response = self._client.get(f"/dashboard/{dashboard_id}/revisions")
+        response = self._client.get(
+            "/revision",
+            params={"entity": "dashboard", "id": dashboard_id},
+        )
 
         # The API returns a list directly
         if isinstance(response, list):
@@ -130,7 +134,8 @@ class DashboardsClient:
     def revert(self, dashboard_id: int, revision_id: int) -> dict[str, Any]:
         """Revert dashboard to a previous revision.
 
-        Makes a POST request to /api/dashboard/:id/revert.
+        Makes a POST request to the generic /api/revision/revert endpoint keyed
+        by entity+id; there is no dashboard-specific revert endpoint.
 
         Args:
             dashboard_id: The ID of the dashboard.
@@ -140,6 +145,6 @@ class DashboardsClient:
             Reverted dashboard dictionary.
         """
         return self._client.post(
-            f"/dashboard/{dashboard_id}/revert",
-            json={"revision_id": revision_id},
+            "/revision/revert",
+            json={"entity": "dashboard", "id": dashboard_id, "revision_id": revision_id},
         )
