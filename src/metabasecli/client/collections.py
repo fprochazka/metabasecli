@@ -41,6 +41,34 @@ class CollectionsClient:
             return response
         return []
 
+    def get_descendant_ids(self, collection_id: int) -> set[int]:
+        """Return ``collection_id`` plus the ids of every collection nested under it.
+
+        The search API's ``collection`` filter matches an entire subtree. Reproducing
+        that filter client-side (needed for servers that ignore the param, e.g. 0.48)
+        therefore requires the collection's full descendant set, which this derives by
+        walking the collection tree. Falls back to just ``collection_id`` when the
+        collection is not present in the tree.
+        """
+        tree = self.get_tree(exclude_archived=False)
+
+        def subtree_ids(node: dict[str, Any]) -> set[int]:
+            ids = {node["id"]}
+            for child in node.get("children", []):
+                ids |= subtree_ids(child)
+            return ids
+
+        def find(nodes: list[dict[str, Any]]) -> set[int] | None:
+            for node in nodes:
+                if node.get("id") == collection_id:
+                    return subtree_ids(node)
+                found = find(node.get("children", []))
+                if found is not None:
+                    return found
+            return None
+
+        return find(tree) or {collection_id}
+
     def get(self, collection_id: int | str) -> dict[str, Any]:
         """Get collection details.
 

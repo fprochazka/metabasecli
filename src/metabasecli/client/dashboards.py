@@ -35,7 +35,10 @@ class DashboardsClient:
         }
 
         if collection_id is not None:
-            params["collection_id"] = collection_id
+            # The search API's collection filter is named `collection` (an integer id)
+            # and matches the whole subtree; `collection_id` is not a real param and is
+            # silently ignored by the server.
+            params["collection"] = collection_id
 
         response = self._client.get("/search", params=params)
 

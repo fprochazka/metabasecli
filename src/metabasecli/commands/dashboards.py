@@ -17,6 +17,7 @@ from ..logging import console, error_console
 from ..models.dashboard import Dashboard
 from ..output import (
     create_export_dir,
+    filter_items_by_collections,
     get_collection_path_parts,
     handle_api_error,
     output_error_json,
@@ -127,6 +128,11 @@ def list_dashboards(
     try:
         client = ctx.require_auth()
         dashboards = client.dashboards.list(collection_id=collection_id)
+
+        # The server-side `collection` filter is a no-op on Metabase 0.48; enforce it
+        # over the returned page for subtree-consistent results on both versions.
+        allowed_ids = client.collections.get_descendant_ids(collection_id)
+        dashboards = filter_items_by_collections(dashboards, allowed_ids)
 
         if json_output:
             # Build output data
