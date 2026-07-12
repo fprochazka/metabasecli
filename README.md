@@ -145,8 +145,8 @@ metabase cards get <id>                    # Get card definition
 # Run query and export results
 metabase cards run <id>
 # Creates /tmp/metabase-<timestamp>/
-#   card-<id>-data.json   (query results as JSON)
-#   card-<id>-data.csv    (query results as CSV)
+#   card-<id>-results.json   (query results as JSON)
+#   card-<id>-results.csv    (query results as CSV)
 
 # Create or update
 metabase cards import --file card.json              # Create new card
@@ -169,7 +169,6 @@ metabase dashboards get <id>               # Get dashboard with cards
 # Export (dashboard + all referenced cards)
 metabase dashboards export <id>
 # Creates /tmp/metabase-<timestamp>/
-#   manifest.json         (export metadata)
 #   dashboard-<id>.json   (dashboard definition)
 #   card-<id>.json        (one per referenced card)
 
@@ -265,21 +264,6 @@ Error codes: `NOT_FOUND`, `AUTHENTICATION_ERROR`, `SESSION_EXPIRED`, `API_ERROR`
 
 ## Export File Formats
 
-### manifest.json
-
-```json
-{
-  "export_version": "1.0",
-  "exported_at": "2025-02-05T14:30:22Z",
-  "metabase_url": "https://metabase.example.com",
-  "dashboard_id": 123,
-  "files": {
-    "dashboard": "dashboard-123.json",
-    "cards": ["card-456.json", "card-789.json"]
-  }
-}
-```
-
 ### Card JSON
 
 Complete card definition including:
@@ -346,8 +330,8 @@ metabase dashboards import --file new-dashboard.json
 metabase cards run 123
 
 # Results in /tmp/metabase-<timestamp>/
-#   card-123-data.json - structured data
-#   card-123-data.csv  - for spreadsheets
+#   card-123-results.json - structured data
+#   card-123-results.csv  - for spreadsheets
 ```
 
 ## Troubleshooting
