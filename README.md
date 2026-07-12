@@ -87,12 +87,12 @@ metabase auth login --profile staging
 metabase --profile staging databases list
 ```
 
-Config stored at `~/.config/metabasecli/config.toml`.
+Config stored at `~/.config/metabasecli/config.toml`. Alongside it, `~/.config/metabasecli/cache.json` caches informational per-profile instance metadata (currently the detected Metabase version); it is safe to delete and is regenerated on the next `auth login`/`auth status`.
 
 ### Check Auth Status
 
 ```bash
-metabase auth status        # Shows current user and auth method
+metabase auth status        # Shows current user, instance version, and auth method
 metabase auth token         # Prints current token (for debugging)
 metabase auth logout        # Clear stored credentials
 ```
