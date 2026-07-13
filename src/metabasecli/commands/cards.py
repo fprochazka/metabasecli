@@ -14,6 +14,7 @@ from ..context import get_context
 from ..logging import console, error_console
 from ..output import (
     create_export_dir,
+    filter_items_by_collections,
     get_collection_path_parts,
     handle_api_error,
     output_error_json,
@@ -105,9 +106,14 @@ def list_cards(
         client = ctx.require_auth()
         cards = client.cards.list(
             filter_type=filter_type,
-            collection_id=collection_id,
             database_id=database_id,
         )
+
+        if collection_id is not None:
+            # /api/card has no server-side collection filter, so confine the returned
+            # list client-side (subtree-consistent, matching search/dashboards list).
+            allowed_ids = client.collections.get_descendant_ids(collection_id)
+            cards = filter_items_by_collections(cards, allowed_ids)
 
         if json_output:
             # Build output data

@@ -19,6 +19,7 @@ from ..output import (
     create_export_dir,
     filter_items_by_collections,
     get_collection_path_parts,
+    get_item_collection_id,
     handle_api_error,
     output_error_json,
     output_json,
@@ -141,7 +142,8 @@ def list_dashboards(
                 dashboard_entry = {
                     "id": dashboard.get("id"),
                     "name": dashboard.get("name"),
-                    "collection_id": dashboard.get("collection_id"),
+                    # Search hits nest the collection id under `collection`, not at top level.
+                    "collection_id": get_item_collection_id(dashboard),
                     "archived": dashboard.get("archived", False),
                 }
                 # Include collection name if available

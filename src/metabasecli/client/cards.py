@@ -22,16 +22,16 @@ class CardsClient:
     def list(
         self,
         filter_type: str | None = None,
-        collection_id: int | None = None,
         database_id: int | None = None,
     ) -> list[dict[str, Any]]:
         """List cards with optional filtering.
 
-        Makes a GET request to /api/card/.
+        Makes a GET request to /api/card/. The endpoint has no collection filter,
+        so confining results to a collection is done client-side over the returned
+        list by the caller.
 
         Args:
             filter_type: Filter type: all, mine, bookmarked, archived, database, table, using_model.
-            collection_id: Filter by collection ID.
             database_id: Filter by database ID (requires filter_type=database).
 
         Returns:
@@ -41,9 +41,6 @@ class CardsClient:
 
         if filter_type:
             params["f"] = filter_type
-
-        if collection_id is not None:
-            params["collection_id"] = collection_id
 
         if database_id is not None:
             params["database_id"] = database_id
