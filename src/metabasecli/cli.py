@@ -13,6 +13,7 @@ from .commands import (
     databases_app,
     resolve_command,
     search_command,
+    snapshot_command,
 )
 from .context import get_context
 from .logging import error_console, setup_logging
@@ -39,6 +40,7 @@ app.add_typer(cards_app, name="questions", hidden=True)
 app.command("search")(search_command)
 app.command("resolve")(resolve_command)
 app.command("api")(api_command)
+app.command("snapshot")(snapshot_command)
 
 _ctx = get_context()
 
