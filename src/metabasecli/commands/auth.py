@@ -4,10 +4,11 @@ Provides commands for logging in, logging out, checking authentication status,
 and retrieving the current session token.
 """
 
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 
+from ..cache import save_instance_version
 from ..client.base import AuthenticationError
 from ..config import load_config, save_config
 from ..context import get_context
@@ -16,6 +17,16 @@ from ..models.auth import AuthConfig, AuthMethod
 from ..output import output_error_json, output_json
 
 app = typer.Typer(name="auth", help="Authentication commands.")
+
+
+def _extract_version_tag(session_properties: Any) -> str | None:
+    """Pull the instance version tag (e.g. "v1.60.2") out of session properties."""
+    if not isinstance(session_properties, dict):
+        return None
+    version_info = session_properties.get("version")
+    if not isinstance(version_info, dict):
+        return None
+    return version_info.get("tag")
 
 
 def _prompt_auth_method() -> AuthMethod:
@@ -103,6 +114,9 @@ def login(
         profile=profile,
     )
 
+    # Captured from the validation call below so the instance version can be cached.
+    session_properties: Any = None
+
     if auth_method == AuthMethod.API_KEY:
         api_key = typer.prompt("API Key", hide_input=True)
         config.api_key = api_key
@@ -113,7 +127,7 @@ def login(
             from ..client.base import MetabaseClient
 
             client = MetabaseClient(config)
-            client.auth.get_session_properties()
+            session_properties = client.auth.get_session_properties()
             console.print("[green]API key is valid![/green]")
         except AuthenticationError:
             error_console.print("[red]Invalid API key[/red]")
@@ -132,7 +146,7 @@ def login(
             from ..client.base import MetabaseClient
 
             client = MetabaseClient(config)
-            client.auth.get_session_properties()
+            session_properties = client.auth.get_session_properties()
             console.print("[green]Session ID is valid![/green]")
         except AuthenticationError:
             error_console.print("[red]Invalid or expired session ID[/red]")
@@ -167,12 +181,24 @@ def login(
 
             config.session_id = session_id
             console.print("[green]Authentication successful![/green]")
+
+            # Fetch session properties for version caching (best-effort — auth
+            # already succeeded, so a failure here must not fail the login).
+            try:
+                session_properties = MetabaseClient(config).auth.get_session_properties()
+            except Exception:
+                session_properties = None
         except AuthenticationError as e:
             error_console.print(f"[red]Authentication failed: {e}[/red]")
             raise typer.Exit(1) from None
         except Exception as e:
             error_console.print(f"[red]Failed to authenticate: {e}[/red]")
             raise typer.Exit(1) from None
+
+    # Cache the instance version for informational display in `auth status`.
+    version = _extract_version_tag(session_properties)
+    if version:
+        save_instance_version(profile, config.url, version)
 
     # Save configuration
     save_config(config, profile)
@@ -280,8 +306,12 @@ def status(
         from ..client.base import MetabaseClient
 
         client = MetabaseClient(config)
-        client.auth.get_session_properties()
+        session_properties = client.auth.get_session_properties()
         user_info = client.auth.get_current_user()
+
+        version = _extract_version_tag(session_properties)
+        if version:
+            save_instance_version(profile, config.url, version)
 
         if json_output:
             output_json(
@@ -296,6 +326,7 @@ def status(
                         "is_superuser": user_info.get("is_superuser", False),
                     },
                     "instance_url": config.url,
+                    "version": version,
                 }
             )
         else:
@@ -304,6 +335,8 @@ def status(
             if name:
                 console.print(f"[green]Name:[/green] {name}")
             console.print(f"[green]Instance:[/green] {config.url}")
+            if version:
+                console.print(f"[green]Version:[/green] {version}")
             console.print(f"[green]Auth method:[/green] {config.auth_method.value}")
             if user_info.get("is_superuser"):
                 console.print("[cyan]User is a superuser[/cyan]")

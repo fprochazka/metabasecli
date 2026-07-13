@@ -17,7 +17,9 @@ from ..logging import console, error_console
 from ..models.dashboard import Dashboard
 from ..output import (
     create_export_dir,
+    filter_items_by_collections,
     get_collection_path_parts,
+    get_item_collection_id,
     handle_api_error,
     output_error_json,
     output_json,
@@ -128,6 +130,11 @@ def list_dashboards(
         client = ctx.require_auth()
         dashboards = client.dashboards.list(collection_id=collection_id)
 
+        # The server-side `collection` filter is a no-op on Metabase 0.48; enforce it
+        # over the returned page for subtree-consistent results on both versions.
+        allowed_ids = client.collections.get_descendant_ids(collection_id)
+        dashboards = filter_items_by_collections(dashboards, allowed_ids)
+
         if json_output:
             # Build output data
             dashboard_list = []
@@ -135,7 +142,8 @@ def list_dashboards(
                 dashboard_entry = {
                     "id": dashboard.get("id"),
                     "name": dashboard.get("name"),
-                    "collection_id": dashboard.get("collection_id"),
+                    # Search hits nest the collection id under `collection`, not at top level.
+                    "collection_id": get_item_collection_id(dashboard),
                     "archived": dashboard.get("archived", False),
                 }
                 # Include collection name if available

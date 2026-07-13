@@ -22,16 +22,16 @@ class CardsClient:
     def list(
         self,
         filter_type: str | None = None,
-        collection_id: int | None = None,
         database_id: int | None = None,
     ) -> list[dict[str, Any]]:
         """List cards with optional filtering.
 
-        Makes a GET request to /api/card/.
+        Makes a GET request to /api/card/. The endpoint has no collection filter,
+        so confining results to a collection is done client-side over the returned
+        list by the caller.
 
         Args:
             filter_type: Filter type: all, mine, bookmarked, archived, database, table, using_model.
-            collection_id: Filter by collection ID.
             database_id: Filter by database ID (requires filter_type=database).
 
         Returns:
@@ -41,9 +41,6 @@ class CardsClient:
 
         if filter_type:
             params["f"] = filter_type
-
-        if collection_id is not None:
-            params["collection_id"] = collection_id
 
         if database_id is not None:
             params["database_id"] = database_id
@@ -58,18 +55,23 @@ class CardsClient:
             return response["data"]
         return []
 
-    def get(self, card_id: int) -> dict[str, Any]:
+    def get(self, card_id: int, legacy_mbql: bool = False) -> dict[str, Any]:
         """Get card details including full query definition.
 
         Makes a GET request to /api/card/:id.
 
         Args:
             card_id: The ID of the card to retrieve.
+            legacy_mbql: Request the legacy MBQL shape for ``dataset_query``. On
+                Metabase 0.57+ the endpoint otherwise returns the opaque pMBQL
+                form (no ``type``/``native``); the param is ignored on older
+                versions, which already return the legacy shape.
 
         Returns:
             Card dictionary with full details.
         """
-        return self._client.get(f"/card/{card_id}")
+        params = {"legacy-mbql": "true"} if legacy_mbql else None
+        return self._client.get(f"/card/{card_id}", params=params)
 
     def run(
         self,

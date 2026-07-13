@@ -12,7 +12,7 @@ import typer
 from ..constants import SEARCHABLE_MODELS
 from ..context import get_context
 from ..logging import console
-from ..output import get_collection_path, handle_api_error, output_json
+from ..output import filter_items_by_collections, get_collection_path, handle_api_error, output_json
 
 
 def _print_model_group(model_type: str, items: list) -> None:
@@ -95,6 +95,17 @@ def search_command(
 
         data = results.get("data", [])
         total = results.get("total", len(data))
+
+        if collection_id is not None:
+            # The server-side `collection` filter is a no-op on Metabase 0.48; enforce it
+            # over the returned page for subtree-consistent results on both versions.
+            allowed_ids = client.collections.get_descendant_ids(collection_id)
+            filtered = filter_items_by_collections(data, allowed_ids)
+            if len(filtered) != len(data):
+                # Items were dropped, so the server did not filter (0.48); its `total`
+                # counts the unfiltered result set, so report the count we can vouch for.
+                total = len(filtered)
+            data = filtered
 
         if json_output:
             # Build JSON output

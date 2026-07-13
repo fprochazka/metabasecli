@@ -1,141 +1,105 @@
 # Metabase API Schema Guide
 
-How to obtain the Metabase API specification for different versions.
+How to obtain the Metabase API specification for a given version, and how the versioned snapshots in this repo are produced.
 
-## OpenAPI Endpoint (v0.50+)
+## Where the spec comes from
 
-Metabase versions 0.50 and later expose an OpenAPI 3.0 specification at:
+Metabase's API is **not versioned** and can change between releases, so the spec you work against must match the instance's version. There are three sources, in order of convenience:
 
-```
-GET /api/docs/openapi.json
-```
+### 1. Committed OpenAPI spec in the source tree (no auth) — preferred
 
-### Download with session authentication
+Starting around **v0.60**, Metabase commits a generated OpenAPI 3.1 spec to its own repository at `docs/api.json`. It needs no running instance and no credentials — download it straight from GitHub for the exact tag:
 
 ```bash
-# 1. Get session token
-curl -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"username": "your@email.com", "password": "yourpassword"}' \
-  https://your-metabase.com/api/session
-
-# 2. Download spec
-curl -H 'X-Metabase-Session: <session_id>' \
-  https://your-metabase.com/api/docs/openapi.json -o openapi.json
+curl -sL https://raw.githubusercontent.com/metabase/metabase/v0.60.2/docs/api.json -o openapi.json
 ```
 
-### Download with API key (if configured)
+This is the source `scripts/fetch_api_docs.py` uses for newer versions (see below). Older tags (e.g. `v1.48.2`) do **not** have this file.
+
+### 2. Live OpenAPI endpoint (v0.50+, needs auth)
+
+Metabase 0.50 and later expose the same spec at runtime:
+
+```
+GET /api/docs/openapi.json          # the spec (JSON)
+GET /api/docs/                       # interactive API explorer (Scalar UI)
+```
+
+Both require an authenticated session or API key:
 
 ```bash
-curl -H 'x-api-key: YOUR_API_KEY' \
-  https://your-metabase.com/api/docs/openapi.json -o openapi.json
+# session auth
+curl -H 'X-Metabase-Session: <session_id>' https://your-metabase.com/api/docs/openapi.json -o openapi.json
+
+# API-key auth (v0.49+, admin must enable)
+curl -H 'x-api-key: mb_YOUR_KEY' https://your-metabase.com/api/docs/openapi.json -o openapi.json
 ```
 
-### Interactive API docs
+### 3. Per-endpoint markdown in the source tree (older versions)
 
-Available at `/api/docs` (served via RapiDoc/Scalar).
+Older Metabase versions have no OpenAPI spec at all, but they ship human-readable per-endpoint markdown under `docs/api/` in the source tree (`card.md`, `dashboard.md`, `session.md`, …, plus an `ee/` subdirectory for enterprise endpoints). Download them per tag from GitHub — this is the source `scripts/fetch_api_docs.py` uses for older versions.
 
-## Older Versions (< v0.50)
+## Versioned docs in this repo
 
-Older Metabase versions do not have an OpenAPI endpoint. Options:
+The `docs/api/` directory (gitignored) holds one subdirectory per Metabase version this CLI cares about:
 
-### Option 1: Download markdown docs from GitHub
+```
+docs/api/
+├── v48/            # v1.48.2 — per-endpoint markdown copied verbatim (incl. ee/)
+└── v60/            # v0.60.2 — openapi.json + generated per-tag markdown
+```
 
-The API documentation is available as markdown files in the Metabase repository.
+Regenerate them with the fetch script (stdlib only, downloads from GitHub, no auth or Metabase instance required):
 
 ```bash
-# For a specific version (e.g., v1.48.2)
-VERSION="v1.48.2"
-
-curl -sL "https://github.com/metabase/metabase/archive/refs/tags/${VERSION}.tar.gz" \
-  -o /tmp/metabase.tar.gz
-
-tar -xzf /tmp/metabase.tar.gz -C /tmp
-
-# Docs are in:
-ls /tmp/metabase-${VERSION#v}/docs/api/
+uv run python scripts/fetch_api_docs.py all      # or: v48 | v60
 ```
 
-This gives you markdown files like:
-- `session.md` - Authentication endpoints
-- `card.md` - Questions/queries
-- `dashboard.md` - Dashboards
-- `database.md` - Database connections
-- `collection.md` - Collections/folders
-- etc.
+For a new version, add an entry to the `VERSIONS` table at the top of the script. The `v60`-style markdown is generated from `openapi.json` (grouped by OpenAPI tag) as grep-friendly reference — method, path, summary/description, parameters, and request-body fields — not rendered documentation.
 
-### Option 2: Browse versioned docs online
-
-Metabase hosts versioned documentation:
-
-```
-https://www.metabase.com/docs/v0.48/api
-https://www.metabase.com/docs/v0.49/api
-https://www.metabase.com/docs/latest/api
-```
-
-### Option 3: Community OpenAPI spec
-
-A minimal community-maintained spec exists at:
+## Checking an instance's version
 
 ```bash
-curl -o openapi.yaml \
-  https://raw.githubusercontent.com/grokify/go-metabase/master/codegen/swagger_spec.yaml
+curl -s -H 'X-Metabase-Session: <session_id>' https://your-metabase.com/api/session/properties | jq '.version'
+# {"date": "2024-01-05", "tag": "v1.48.2", "hash": "e66c075"}
 ```
 
-**Note:** This is incomplete and may be outdated. Primarily covers endpoints needed for the Go SDK.
+The CLI caches this `version.tag` per profile and shows it in `metabase auth status`.
 
-## Checking Metabase Version
+## Removed / deprecated endpoints
 
-To check what version a Metabase instance is running:
+- **`GET /api/util/openapi`** — removed in **0.55**. Use `GET /api/docs/openapi.json` instead.
 
-```bash
-# Get session first, then:
-curl -s -H 'X-Metabase-Session: <session_id>' \
-  https://your-metabase.com/api/session/properties \
-  | python3 -c "import sys,json; print(json.load(sys.stdin).get('version'))"
+## API changelog
 
-# Output example:
-# {'date': '2024-01-05', 'tag': 'v1.48.2', 'hash': 'e66c075'}
-```
+Metabase publishes breaking API changes here — the authoritative reference when moving between versions:
 
-## Deprecated Endpoints
+<https://www.metabase.com/docs/latest/developers-guide/api-changelog>
 
-- `GET /api/util/openapi` - Removed in newer versions, use `/api/docs/openapi.json` instead
+## Authentication methods
 
-## Known Issues
+Metabase supports two authentication methods for API access.
 
-1. **Missing `responses` field**: Some Metabase versions generate OpenAPI specs missing required `responses` fields, causing issues with strict OpenAPI validators. See [GitHub issue #61303](https://github.com/metabase/metabase/issues/61303).
-
-2. **API not versioned**: Metabase's API is not versioned and may change between releases. The spec reflects the current state of the specific instance.
-
-## Authentication Methods
-
-Metabase supports two authentication methods for API access:
-
-### 1. Session Token (username/password)
+### Session token (username/password)
 
 ```bash
-# Login
-curl -X POST \
-  -H "Content-Type: application/json" \
+curl -X POST -H "Content-Type: application/json" \
   -d '{"username": "user@example.com", "password": "secret"}' \
   https://metabase.example.com/api/session
+# -> {"id": "session-uuid-here"}
 
-# Response: {"id": "session-uuid-here"}
-
-# Use in subsequent requests
-curl -H 'X-Metabase-Session: session-uuid-here' \
-  https://metabase.example.com/api/...
+curl -H 'X-Metabase-Session: session-uuid-here' https://metabase.example.com/api/...
 ```
 
-### 2. API Keys (admin-configured)
+### API keys (admin-configured)
 
-API keys can be created in Metabase admin UI (People > API Keys). Use with header:
+Created in the Metabase admin UI (People > API Keys), used via the `x-api-key` header. Require Metabase v0.49+ and must be enabled by an admin.
 
 ```bash
-curl -H 'x-api-key: mb_api_key_here' \
-  https://metabase.example.com/api/...
+curl -H 'x-api-key: mb_api_key_here' https://metabase.example.com/api/...
 ```
 
-**Note:** API keys require Metabase v0.49+ and must be enabled by an admin.
+## Known issues
+
+- **Missing `responses` field:** some Metabase versions generate OpenAPI specs missing required `responses` fields, tripping strict validators. See [GitHub issue #61303](https://github.com/metabase/metabase/issues/61303).
+- **Unversioned API:** the spec reflects the exact state of one instance; endpoints and parameters can change between releases without a version bump.

@@ -87,12 +87,12 @@ metabase auth login --profile staging
 metabase --profile staging databases list
 ```
 
-Config stored at `~/.config/metabasecli/config.toml`.
+Config stored at `~/.config/metabasecli/config.toml`. Alongside it, `~/.config/metabasecli/cache.json` caches informational per-profile instance metadata (currently the detected Metabase version); it is safe to delete and is regenerated on the next `auth login`/`auth status`.
 
 ### Check Auth Status
 
 ```bash
-metabase auth status        # Shows current user and auth method
+metabase auth status        # Shows current user, instance version, and auth method
 metabase auth token         # Prints current token (for debugging)
 metabase auth logout        # Clear stored credentials
 ```
@@ -145,8 +145,8 @@ metabase cards get <id>                    # Get card definition
 # Run query and export results
 metabase cards run <id>
 # Creates /tmp/metabase-<timestamp>/
-#   card-<id>-data.json   (query results as JSON)
-#   card-<id>-data.csv    (query results as CSV)
+#   card-<id>-results.json   (query results as JSON)
+#   card-<id>-results.csv    (query results as CSV)
 
 # Create or update
 metabase cards import --file card.json              # Create new card
@@ -169,7 +169,6 @@ metabase dashboards get <id>               # Get dashboard with cards
 # Export (dashboard + all referenced cards)
 metabase dashboards export <id>
 # Creates /tmp/metabase-<timestamp>/
-#   manifest.json         (export metadata)
 #   dashboard-<id>.json   (dashboard definition)
 #   card-<id>.json        (one per referenced card)
 
@@ -208,6 +207,19 @@ metabase resolve "/collection/789"
 ```
 
 Useful for AI agents that receive Metabase links and need to understand what they reference.
+
+### API (raw requests)
+
+An escape hatch for endpoints without a dedicated command. Sends a raw request and prints the server's response verbatim (no `{success, data}` envelope), modeled on `gh api` / `glab api`:
+
+```bash
+metabase api /user/current                             # GET (default method)
+metabase api "/search?q=revenue&models=dashboard"      # query string rides inline
+metabase api /card -X POST --input card.json           # body from a file (defaults to POST)
+cat card.json | metabase api /card --input -           # body from stdin
+```
+
+The endpoint may be written as `/card/1`, `card/1`, or `/api/card/1` (all equivalent). The method defaults to `GET`, or to `POST` when `--input` is given; override it with `-X/--method`. Response bodies are pretty-printed when JSON. On a non-2xx status the body is still printed, an `HTTP <status>` note goes to stderr, and the exit code is 1.
 
 ## Output Formats
 
@@ -264,21 +276,6 @@ Error codes: `NOT_FOUND`, `AUTHENTICATION_ERROR`, `SESSION_EXPIRED`, `API_ERROR`
 | 1 | Error (see stderr or JSON error) |
 
 ## Export File Formats
-
-### manifest.json
-
-```json
-{
-  "export_version": "1.0",
-  "exported_at": "2025-02-05T14:30:22Z",
-  "metabase_url": "https://metabase.example.com",
-  "dashboard_id": 123,
-  "files": {
-    "dashboard": "dashboard-123.json",
-    "cards": ["card-456.json", "card-789.json"]
-  }
-}
-```
 
 ### Card JSON
 
@@ -346,8 +343,8 @@ metabase dashboards import --file new-dashboard.json
 metabase cards run 123
 
 # Results in /tmp/metabase-<timestamp>/
-#   card-123-data.json - structured data
-#   card-123-data.csv  - for spreadsheets
+#   card-123-results.json - structured data
+#   card-123-results.csv  - for spreadsheets
 ```
 
 ## Troubleshooting
@@ -390,7 +387,12 @@ uv run metabase --help
 # Lint and format
 uv run ruff check src/ --fix
 uv run ruff format src/
+
+# Refresh the version-scoped Metabase API docs under docs/api/ (downloads from GitHub)
+uv run python scripts/fetch_api_docs.py all
 ```
+
+See [docs/metabase-api.md](docs/metabase-api.md) for how the API spec is sourced per Metabase version.
 
 ### Project Structure
 
@@ -412,7 +414,7 @@ src/metabasecli/
 ## Compatibility
 
 - **Python:** 3.11+
-- **Metabase:** Tested with 0.48+, API keys require 0.49+
+- **Metabase:** Tested with 0.48 and 0.60; API keys require 0.49+
 
 ## License
 

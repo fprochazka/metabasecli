@@ -30,6 +30,8 @@ __all__ = [
     "handle_api_error",
     "get_collection_path",
     "get_collection_path_parts",
+    "get_item_collection_id",
+    "filter_items_by_collections",
 ]
 
 
@@ -215,6 +217,33 @@ def handle_api_error(e: Exception, json_output: bool, entity_name: str = "Resour
             output_error_json(code="ERROR", message=str(e))
         else:
             error_console.print(f"[red]Error: {e}[/red]")
+
+
+def get_item_collection_id(item: dict) -> int | None:
+    """Return the id of the collection a search/list item lives in.
+
+    Items expose their parent collection either as a top-level ``collection_id`` or
+    nested under ``collection.id``; search results use the latter.
+    """
+    collection_id = item.get("collection_id")
+    if collection_id is not None:
+        return collection_id
+    collection = item.get("collection")
+    if isinstance(collection, dict):
+        return collection.get("id")
+    return None
+
+
+def filter_items_by_collections(items: list[dict], collection_ids: set[int]) -> list[dict]:
+    """Keep only items whose parent collection is one of ``collection_ids``.
+
+    The server's ``collection`` search filter matches a whole subtree, so callers pass
+    the target collection plus all its descendants here. This mirrors that filter
+    client-side for servers that ignore the param (0.48), keeping both versions
+    consistent; on servers that honour it (0.60) the results already match, so this is
+    a no-op.
+    """
+    return [item for item in items if get_item_collection_id(item) in collection_ids]
 
 
 def get_collection_path(item_or_collection: dict) -> str:
