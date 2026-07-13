@@ -414,7 +414,7 @@ src/metabasecli/
 ## Compatibility
 
 - **Python:** 3.11+
-- **Metabase:** Tested with 0.48+, API keys require 0.49+
+- **Metabase:** Tested with 0.48 and 0.60; API keys require 0.49+
 
 ## License
 
