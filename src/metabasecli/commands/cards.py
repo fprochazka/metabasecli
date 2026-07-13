@@ -179,7 +179,10 @@ def get_card(
 
     try:
         client = ctx.require_auth()
-        card = client.cards.get(card_id)
+        # The human view renders the query from the legacy dataset_query shape
+        # (type + native/query); --json keeps the instance-native shape, which on
+        # Metabase 0.57+ is the opaque pMBQL form.
+        card = client.cards.get(card_id, legacy_mbql=not json_output)
 
         if json_output:
             # Build curated output with collection path

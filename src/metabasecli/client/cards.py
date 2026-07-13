@@ -55,18 +55,23 @@ class CardsClient:
             return response["data"]
         return []
 
-    def get(self, card_id: int) -> dict[str, Any]:
+    def get(self, card_id: int, legacy_mbql: bool = False) -> dict[str, Any]:
         """Get card details including full query definition.
 
         Makes a GET request to /api/card/:id.
 
         Args:
             card_id: The ID of the card to retrieve.
+            legacy_mbql: Request the legacy MBQL shape for ``dataset_query``. On
+                Metabase 0.57+ the endpoint otherwise returns the opaque pMBQL
+                form (no ``type``/``native``); the param is ignored on older
+                versions, which already return the legacy shape.
 
         Returns:
             Card dictionary with full details.
         """
-        return self._client.get(f"/card/{card_id}")
+        params = {"legacy-mbql": "true"} if legacy_mbql else None
+        return self._client.get(f"/card/{card_id}", params=params)
 
     def run(
         self,
