@@ -221,6 +221,57 @@ cat card.json | metabase api /card --input -           # body from stdin
 
 The endpoint may be written as `/card/1`, `card/1`, or `/api/card/1` (all equivalent). The method defaults to `GET`, or to `POST` when `--input` is given; override it with `-X/--method`. Response bodies are pretty-printed when JSON. On a non-2xx status the body is still printed, an `HTTP <status>` note goes to stderr, and the exit code is 1.
 
+### Snapshot (whole-instance mirror)
+
+Dumps the entire instance's shared collection content into a deterministic, git-diffable local file tree. The primary use case is a **read-only archive for AI agents** to grep as local files, and a periodic versioned mirror (run on a schedule, commit and push the output dir to a dedicated repo for history). Restore is explicitly a non-goal; actionability is — every dumped object retains its `id` and a `url` pointing back to the live instance so an agent that finds something can act on it.
+
+```bash
+metabase snapshot --output <dir>                    # full shared-collection mirror
+metabase snapshot --output <dir> --collection-id N  # scope to one subtree (fast)
+metabase snapshot --output <dir> --include-personal # also dump personal collections
+metabase snapshot --output <dir> --commit           # commit output dir after a clean run
+metabase snapshot --output <dir> --commit --push    # commit then push
+metabase snapshot --output <dir> --reprocess-only   # re-canonicalize from cache, no network
+```
+
+**Flags:**
+
+| Flag | Description |
+|------|-------------|
+| `--output <dir>` | Directory to write the snapshot tree into. **Required.** |
+| `--collection-id N` | Restrict to this collection and its descendants. Useful for fast, focused runs. |
+| `--include-personal` | Include personal collections (default: shared, non-archived only). |
+| `--reprocess-only` | Rebuild the tree from the raw cache of a prior full run, skipping all API calls. Errors if the cache is absent. |
+| `--commit` | After a clean run, `git add -A` and commit the output dir as `v<timestamp>`. |
+| `--push` | `git push` the output dir after committing (output dir must be a git repo). |
+| `--json` | Structured JSON output. |
+
+**Output layout** mirrors the collection hierarchy. Directories are named `<id>-<slug>`; each collection gets a `_collection.json`, a `cards/` subdir, and a `dashboards/` subdir. A native-SQL card's SQL is written to a `.sql` companion alongside its `.json`, and the JSON's `dataset_query.native.query` points to that file (`./<id>-<slug>.sql`) instead of inlining the SQL — so the JSON stays readable and the SQL lives once, grep-friendly. Root-level items (no parent collection) land at the tree root:
+
+```
+<output>/
+├── 42-analytics/
+│   ├── _collection.json
+│   ├── cards/
+│   │   ├── 101-weekly-summary.json
+│   │   ├── 102-revenue-by-region.json
+│   │   └── 102-revenue-by-region.sql   # native SQL companion
+│   ├── dashboards/
+│   │   └── 55-executive-overview.json
+│   └── 99-finance/                     # nested sub-collection
+│       ├── _collection.json
+│       └── cards/
+│           └── 210-quarterly-costs.json
+├── cards/                              # root-level cards (collection_id == null)
+└── dashboards/
+```
+
+**Determinism and idempotency:** every file is written as `json.dumps(sort_keys=True, indent=2)`. Runtime-churn fields (`view_count`, `last_used_at`, embedded per-run blobs, etc.) are stripped before writing, so re-running on an unchanged instance produces a byte-identical tree and `git diff` stays empty.
+
+**Default scope and scale:** only shared, non-archived collections are fetched by default; personal collections (and nested personal sub-collections) are excluded. `--include-personal` widens the scope. `--collection-id` scopes to a single subtree for focused, fast runs. A full run against a large instance is a slow batch job — expect thousands of per-object API calls. Every fetched body is cached under `<output>/.metabase-snapshot-cache/` (auto-gitignored), enabling `--reprocess-only` to re-run canonicalization from that cache without re-fetching.
+
+**Mirror workflow:** if the output dir is its own git repo, `--commit` versions the snapshot as `v<timestamp>` and `--push` pushes it upstream. Both run only after a fully successful run — a partial mirror with fetch failures is never committed.
+
 ## Output Formats
 
 ### Human-Readable (Default)

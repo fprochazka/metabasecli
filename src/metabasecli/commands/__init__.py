@@ -11,6 +11,7 @@ from .dashboards import app as dashboards_app
 from .databases import app as databases_app
 from .resolve import resolve_command
 from .search import search_command
+from .snapshot import snapshot_command
 
 __all__ = [
     "auth_app",
@@ -21,4 +22,5 @@ __all__ = [
     "search_command",
     "resolve_command",
     "api_command",
+    "snapshot_command",
 ]
