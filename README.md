@@ -46,7 +46,31 @@ Editable mode means changes are automatic after `git pull` - no reinstall needed
 
 ## Claude Code
 
-A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skill is available for this project, allowing Claude to use the `metabase` CLI autonomously. See [metabasecli skill](https://github.com/fprochazka/claude-code-plugins/tree/master/plugins/metabasecli) for installation and usage instructions.
+This repository is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin marketplace. The plugin ships a skill that teaches Claude how to use the `metabase` CLI. It does not install the CLI itself — install that first, see [Installation](#installation).
+
+```bash
+claude plugin marketplace add fprochazka/metabasecli --scope user
+claude plugin install metabasecli@fprochazka-metabasecli --scope user
+```
+
+To upgrade after a new release:
+
+```bash
+claude plugin marketplace update fprochazka-metabasecli
+claude plugin update metabasecli@fprochazka-metabasecli
+```
+
+The skill's `allowed-tools` frontmatter auto-allows read-only commands (`search`, `resolve`, `databases list`, `collections tree`, `cards get`, `dashboards export`, etc.) and auth/help commands. Write operations (`cards create`, `dashboards import`, etc.) require manual approval. To let the skill load without a prompt, add it to `~/.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Skill(metabasecli)"
+    ]
+  }
+}
+```
 
 ## Authentication
 

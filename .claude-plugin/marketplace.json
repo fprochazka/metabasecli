@@ -1,0 +1,20 @@
+{
+  "name": "fprochazka-metabasecli",
+  "description": "CLI for querying Metabase, with a skill for Claude Code",
+  "owner": {
+    "name": "Filip Procházka"
+  },
+  "plugins": [
+    {
+      "name": "metabasecli",
+      "description": "Skill for interacting with Metabase using the metabase CLI",
+      "version": "1.0.3",
+      "author": {
+        "name": "Filip Procházka",
+        "url": "https://github.com/fprochazka"
+      },
+      "source": "./coding-agent-plugins/claude-code",
+      "homepage": "https://github.com/fprochazka/metabasecli"
+    }
+  ]
+}
